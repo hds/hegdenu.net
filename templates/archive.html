@@ -1,0 +1,16 @@
+{% extends "index.html" %}
+
+{% block content %}
+<h1>{{ section.title }}</h1>
+
+{% set section = get_section(path="posts/_index.md") %}
+{% for year, year_pages in section.pages | group_by(attribute="year") %}
+<h3>{{ year }}</h3>
+{% for page in year_pages %}
+<p>
+    <a href="{{ page.permalink }}">{{ page.title }}</a>
+    ({{ page.date | date(format="%e %B") }})
+</p>
+{% endfor %}
+{% endfor %}
+{% endblock content %}
