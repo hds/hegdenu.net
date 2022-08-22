@@ -1,5 +1,5 @@
 +++
-title = "Initial commit"
+title = "initial commit"
 author = "hds"
 date = "2022-08-10"
 +++

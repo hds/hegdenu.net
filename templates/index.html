@@ -1,49 +1,12 @@
-<!DOCTYPE html>
-<html lang="en_GB">
+{% extends "base.html" %}
 
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+{% block outertitle %}{% endblock outertitle %}
 
-	<title>hēg denu</title>
+{% block content %}
+<h1 class="page-title">hēg denu</h1>
 
-	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
-	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<p class="cross-line"><em>{{ section.description }}</em></p>
 
-	<link rel="stylesheet" href="{{ get_url(path=" css/hds.css") | safe }}">
-</head>
-
-<body>
-	<div class="masthead" role="navigation">
-		<div class="container">
-			<nav>
-				<a class="nav-item" href="/">home</a>
-				<a class="nav-item" href="/archive/">archive</a>
-				<a class="nav-item" href="/about/">about</a>
-			</nav>
-		</div>
-	</div>
-	<div class="container" role="main">
-
-		{% block content %}
-		<h1 class="page-title">hēg denu</h1>
-
-		<p class="cross-line"><em>{{ section.description }}</em></p>
-
-		{% set section = get_section(path="posts/_index.md") %}
-		{% include "_post_list.html" %}
-
-		{% endblock content %}
-
-		<div class="footer" role="footer">
-			<div class="separator"></div>
-			<p><span class="current-year">2022</span>, Hayden Stainsby.</p>
-		</div>
-	</div>
-
-	<script>
-		$('.current-year').text((new Date()).getFullYear());
-	</script>
-</body>
-
-</html>
+{% set section = get_section(path="posts/_index.md") %}
+{% include "_post_list.html" %}
+{% endblock content %}

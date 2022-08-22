@@ -1,8 +1,14 @@
-{% extends "index.html" %}
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }}{% endblock title %}
 
 {% block content %}
-<h1>{{ page.title }}</h1>
-<h5>{{ page.date }}</h5>
+<div class="post">
+    <h1><a href="{{ page.permalink }}">{{ page.title }}</a></h1>
+    <h5>{{ page.date | date(format="%A, %e %B %Y") }}</h5>
 
-<div>{{ page.content | safe }}</div>
+    <div>{{ page.content | safe }}</div>
+
+    {% if not loop.last %}<div class="separator"></div>{% endif %}
+</div>
 {% endblock content %}
