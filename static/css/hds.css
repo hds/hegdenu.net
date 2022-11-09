@@ -100,7 +100,6 @@ nav>a.nav-item  {
 	display: inline-block;
 	padding: 10px 14px;
 
-	/* color: #fff; */
 	text-decoration: none;
 	font-size: 13pt;
 }
@@ -127,15 +126,6 @@ nav>a.nav-item  {
 
 .post blockquote > p {
 	font-style: italic;
-}
-
-/* **** CODE **** */
-
-.codehilite pre {
-	border: 0;
-	margin: 20px 10px 20px 10px;
-	border-radius: 0;
-	box-shadow: 4px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* **** LIGHT/DARK MODE **** */
@@ -168,8 +158,6 @@ nav>a.nav-item  {
         background-color: #eee;
     }
 
-
-
     .skin-border,
     .separator  {
         border-color: #80f;
@@ -180,7 +168,7 @@ nav>a.nav-item  {
 /* **** Home page **** */
 
 .cross-line {
-	margin-bottom: 60px;
+	margin-bottom: 40px;
 }
 
 /* **** Sections **** */
@@ -198,10 +186,14 @@ nav>a.nav-item  {
 
 pre {
 	padding: 8px 10px 10px 10px;
-	margin: 20px;
+	margin: 20px 0;
 	overflow: scroll;
 
-	font-size: 12pt;
+	font-size: 11pt;
+}
+
+p code {
+	font-size: 90%;
 }
 
 /* **** Bootstrap replacement **** */
@@ -233,18 +225,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-	margin: .67em 0;
-
 	font-size: 36px;
+}
+
+h2 {
+	font-size: 30px;
 }
 
 h3 {
 	font-size: 24px;
-
 }
 
 h5 {
 	font-size: 14px;
+	margin-top: .48em;
 }
 
 p {

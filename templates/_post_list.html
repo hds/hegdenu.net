@@ -1,7 +1,7 @@
 {% for page in section.pages %}
 <div class="post">
-    <h3><a href="{{ page.permalink }}">{{ page.title }}</a></h3>
-    <h5>{{ page.date | date(format="%A, %e %B %Y") }}</h5>
+    <h2><a href="{{ page.permalink }}">{{ page.title }}</a></h2>
+    <h5>{{ page.date | date(format="%A, %-d %B %Y") }}</h5>
 
     <div>{{ page.content | safe }}</div>
 

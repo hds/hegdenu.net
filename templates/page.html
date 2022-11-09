@@ -8,7 +8,5 @@
     <h5>{{ page.date | date(format="%A, %e %B %Y") }}</h5>
 
     <div>{{ page.content | safe }}</div>
-
-    {% if not loop.last %}<div class="separator"></div>{% endif %}
 </div>
 {% endblock content %}

@@ -7,11 +7,11 @@
 
 {% set section = get_section(path="posts/_index.md") %}
 {% for year, year_pages in section.pages | group_by(attribute="year") %}
-<h3>{{ year }}</h3>
+<h2>{{ year }}</h2>
 {% for page in year_pages %}
 <p>
     <a href="{{ page.permalink }}">{{ page.title }}</a>
-    ({{ page.date | date(format="%e %B") }})
+    ({{- page.date | date(format="%-d %B") }})
 </p>
 {% endfor %}
 {% endfor %}
