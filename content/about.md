@@ -13,6 +13,8 @@ If you'd like to contact me, you can send an email to &lsquo;hds&rsquo; at this 
 
 _GitHub_: [hds](https://github.com/hds)
 
-_Twitter_: [@haydenstainsby](https://twitter.com/haydenstainsby)
+_Mastodon_: [@hds@hachyderm.io](https://hachyderm.io/@hds)
+
+_Twitter_: [@haydenstainsby](https://twitter.com/haydenstainsby) (dormant)
 
 _LinkedIn_: [Hayden Stainsby](https://www.linkedin.com/in/hayden-stainsby)
