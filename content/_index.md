@@ -1,6 +1,6 @@
 +++
 title = "Home"
-description = "Yet Another Site by Hayden Stainsby"
+description = "yet another site by Hayden Stainsby"
 +++
 
 Some description.
