@@ -1,5 +1,6 @@
 +++
 title = "track caller"
+slug = "track-caller"
 author = "hds"
 date = "2023-01-29"
 +++
@@ -193,3 +194,57 @@ It doesn't work on closures ([rust#87417](https://github.com/rust-lang/rust/issu
 But it does newly work on async functions ([rust#78840](https://github.com/rust-lang/rust/issues/78840)).
 
 Although I can't seem to work out which version of Rust that's in.
+
+### one more thing
+
+You can also make use of `#[track_caller]` without a panic!
+
+The same mechanism that panic uses to get the calling location is available for all.
+
+It's called with `std::panic::Location::caller()`.
+
+This is used by the [unstable tracing feature](https://docs.rs/tokio/latest/tokio/#unstable-features) in Tokio.
+
+It allows [console](https://github.com/tokio-rs/console) to display the creation location for each task.
+
+A simple example would be:
+
+```rust
+/// Calls (prints) the `name` together with  the calling location.
+#[track_caller]
+pub fn call_me(name: &str) {
+    let caller = std::panic::Location::caller();
+
+    println!(
+        "Calling '{name}' from {file}:{line}",
+        name = name,
+        file = caller.file(),
+        line = caller.line(),
+    );
+}
+```
+
+Because we're using `#[track_caller]`, the panic location will give us where `call_me` was called from.
+
+If we call it twice in succession:
+
+```rust
+fn main() {
+    call_me("Baby");
+
+    call_me("Maybe");
+}
+```
+
+We would get the output:
+
+```
+Calling 'Baby' from src/bin/extra.rs:4
+Calling 'Maybe' from src/bin/extra.rs:6
+```
+
+And this trick also works multiple layers into your call stack.
+
+As long as you remember to annotate every function on the way down.
+
+Which is pretty cool.

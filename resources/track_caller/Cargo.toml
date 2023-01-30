@@ -10,6 +10,8 @@ name = "zero"
 
 [[bin]]
 name = "one"
-src = "src/one.rs"
+
+[[bin]]
+name = "extra"
 
 [dependencies]

@@ -12,3 +12,8 @@ cargo install zola
 
 # Building
 
+From the main directory, run:
+
+```sh
+zola build
+```
