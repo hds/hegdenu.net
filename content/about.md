@@ -3,7 +3,7 @@ title = "about"
 template = "about.html"
 +++
 
-I'm a software engineering manager (and amateur number theorist) living and working in Berlin. I (perhaps very) occasionally write about programming, management, mathematics, and a few other technical things. Oh and Rust, I'll definitely be writing about Rust.
+I'm a software engineering manager (and amateur number theorist) living and working in Granada, Spain. I (perhaps very) occasionally write about programming, management, mathematics, and a few other technical things. Oh and Rust, I'll definitely be writing about Rust.
 
 ### Contact
 
