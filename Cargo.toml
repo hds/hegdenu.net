@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "resources/track_caller",
+    "resources/logging-1",
+    "resources/understanding-async-await",
+]
