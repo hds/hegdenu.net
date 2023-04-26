@@ -2,7 +2,7 @@
 title = "task scheduled time in console"
 slug = "task-scheduled-time-in-console"
 author = "hds"
-date = "2023-04-28"
+date = "2023-04-26"
 +++
 
 Last week we merged a small set of cool changes in [Tokio Console](https://github.com/tokio-rs/console).
@@ -162,3 +162,9 @@ Between 8 and 127 microseconds.
 Of course, maybe 17 seconds is just fine in your use case.
 
 But with Tokio console, you now have that information easily available.
+
+### availability
+
+The scheduled time feature hasn't been released yet.
+
+To use it, you need to use the [`main`](https://github.com/tokio-rs/console) branch for both `console-subscriber` and `tokio-console`.
