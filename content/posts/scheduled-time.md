@@ -13,7 +13,7 @@ They added support for tracking and displaying per task scheduled time.
 
 For the impatient amongst you, here's a screenshot.
 
-![Screenshot of `tokio-console` displaying the task details for the `burn` task in the `app` example.](/img/scheduled-time/app_example-burn_task_details.png)
+![Screenshot of `tokio-console` displaying the task details for the `burn` task in the `app` example.](/img/scheduled-time/app_example-burn_task_details-v2.png)
 
 But what is a task's scheduled time?
 
@@ -133,13 +133,13 @@ Yet, at least.
 
 But you can now see the scheduled time of each task.
 
-![Tokio console showing the task list view. There is a column labelled Sched for the scheduled time.](/img/scheduled-time/app_example-task_list.png)
+![Tokio console showing the task list view. There is a column labelled Sched for the scheduled time.](/img/scheduled-time/app_example-task_list-v2.png)
 
 And sort by that column too.
 
 Let's look at the task with the highest scheduled time, `task2`.
 
-![Tokio console showing the task detail view. There are 2 sets of percentiles and histograms. The top one is for poll (busy) times, the bottom one is for scheduled times.](/img/scheduled-time/app_example-task2_details.png)
+![Tokio console showing the task detail view. There are 2 sets of percentiles and histograms. The top one is for poll (busy) times, the bottom one is for scheduled times.](/img/scheduled-time/app_example-task2_details-v2.png)
 
 It's quickly clear that `task2` spends most of its time "scheduled".
 
@@ -153,7 +153,7 @@ How about we have a look at a more common scheduled times histogram.
 
 Let's look at the task details for the `burn` task that we saw at the beginning.
 
-![Tokio console showing the task detail view for the `burn` task. The scheduled times histogram is more as we'd expect, clustered around the lower end.](/img/scheduled-time/app_example-burn_task_details.png)
+![Tokio console showing the task detail view for the `burn` task. The scheduled times histogram is more as we'd expect, clustered around the lower end.](/img/scheduled-time/app_example-burn_task_details-v2.png)
 
 Here we see that the scheduled times are more reasonable.
 
