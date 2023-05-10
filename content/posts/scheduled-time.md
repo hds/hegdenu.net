@@ -5,6 +5,8 @@ author = "hds"
 date = "2023-04-26"
 +++
 
+> Update (2023-05-10): A new version of `tokio-console` is [available](#availability) including this change!
+
 Last week we merged a small set of cool changes in [Tokio Console](https://github.com/tokio-rs/console).
 
 They added support for tracking and displaying per task scheduled time.
@@ -141,7 +143,7 @@ Let's look at the task with the highest scheduled time, `task2`.
 
 It's quickly clear that `task2` spends most of its time "scheduled".
 
-Exactly 63.57% of its time when this screenshot was taken.
+Exactly 61.34% of its time when this screenshot was taken.
 
 We can also see that during most poll cycles, `task2` spends more than 1 second scheduled.
 
@@ -155,7 +157,7 @@ Let's look at the task details for the `burn` task that we saw at the beginning.
 
 Here we see that the scheduled times are more reasonable.
 
-Between 8 and 127 microseconds.
+Between 22 and 344 microseconds.
 
 (by the way, this example app is available in the [console repo](https://github.com/tokio-rs/console/blob/main/console-subscriber/examples/app.rs))
 
@@ -165,6 +167,8 @@ But with Tokio console, you now have that information easily available.
 
 ### availability
 
-The scheduled time feature hasn't been released yet.
+(updated 2023-05-10)
 
-To use it, you need to use the [`main`](https://github.com/tokio-rs/console) branch for both `console-subscriber` and `tokio-console`.
+The scheduled time feature has released!
+
+To use it, you need at least [`tokio-console` 0.1.8](https://crates.io/crates/tokio-console/0.1.8) and [`console-subscriber` 0.1.9](https://crates.io/crates/console-subscriber/0.1.9).
