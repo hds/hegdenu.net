@@ -59,7 +59,7 @@ mod manual_future {
         TripleAdd2::Init { x, y, z }
     }
 
-    // The `YieldNow` future has beencopied from `yield_now.rs`
+    // The `YieldNow` future has been copied from `yield_now.rs`
     // and a `new()` constructor has been added.
     #[derive(Debug)]
     pub struct YieldNow {

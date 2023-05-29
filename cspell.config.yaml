@@ -1,7 +1,10 @@
 version: "0.2"
 ignorePaths: []
 dictionaryDefinitions: []
-dictionaries: ["en-GB"]
-words: []
+dictionaries:
+  - en-GB
+words:
+  - waker
+  - wakers
 ignoreWords: []
 import: []

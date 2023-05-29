@@ -14,12 +14,12 @@ mod async_await {
 mod manual_future {
     use std::{future::Future, task::Poll};
 
-    pub fn hello(name: &'static str) -> Hello {
+    pub fn hello(name: &'static str) -> impl Future<Output = ()> {
         Hello::Init { name }
     }
 
     #[derive(Debug)]
-    pub enum Hello {
+    enum Hello {
         Init { name: &'static str },
         Done,
     }

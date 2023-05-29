@@ -1,0 +1,18 @@
+shape: sequence_diagram
+
+main: async main()
+fn_hello: hello()
+hello: Hello
+sa: (Side Effects)
+
+main -> fn_hello.fn: hello()
+main <- fn_hello.fn: Hello {
+  style.stroke-dash: 5
+}
+
+main -> hello.future: poll()
+hello.future -> sa: println!("hello, \{name\}!")
+hello.future -> hello.future: *self = Done
+main <- hello.future: Ready(()) {
+  style.stroke-dash: 5
+}
