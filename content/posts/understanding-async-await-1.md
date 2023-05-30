@@ -116,7 +116,7 @@ But we want simpler.
 
 We want, hello world.
 
-#### the simplest async function
+### the simplest async function
 
 We're going to start with an async function that doesn't do anything async.
 
@@ -157,7 +157,7 @@ Specifically, we'll be implementing the trait [std::futures::Future](https://doc
 
 What's a future?
 
-#### aside: futures
+### aside: futures
 
 A future represents an asynchronous computation.
 
@@ -177,7 +177,7 @@ You do this by `.await`ing it.
 
 Then the runtime gives you back the result.
 
-#### the simplest future
+### the simplest future
 
 Let's write our simple async function as a future.
 
@@ -206,11 +206,37 @@ enum Hello {
 }
 ```
 
+#### state machine diagram
+
+As I said about, a future is a state machine.
+
+So let's draw a state machine!
+
+![State machine of our hello world future.](/img/understanding-async-await-1/hello-state_machine.svg)
+
+We'll see this in code shortly in [implementing poll](#implementing-poll).
+
+In short, our `Hello` enum is constructed into the `Init` state.
+
+Something called `poll()` on it, transitioning it to the `Done` state.
+
+(more about `poll()` below)
+
+That's it.
+
+The object can now only be dropped.
+
+(deconstructed)
+
+This might not make sense yet.
+
+But it should help understanding the code.
+
 This isn't a future yet, so we can't await it.
 
 To fix that, we need to implement the Future trait.
 
-#### aside: the easy bits of the Future trait
+### aside: the easy bits of the Future trait
 
 We're going to just look at the easy bits of the [`std::futures::Future`](https://doc.rust-lang.org/std/future/trait.Future.html) trait.
 
@@ -257,7 +283,7 @@ We don't actually need a value here either, so if you don't understand `T`, don'
 
 Skipping over the hard bits makes this easier.
 
-#### implementing poll
+### implementing poll
 
 Let's look at the implementation.
 
@@ -345,7 +371,7 @@ The trait doesn't require that the future panic.
 
 But it's good practice when you start out, as it will quickly catch some logic errors.
 
-#### using our future
+### using our future
 
 We need to construct our new future to be able to use it.
 
@@ -426,11 +452,19 @@ But remember, you've just written your first custom future in Rust!
 
 (have you really written 100 futures? nice!)
 
-#### future sequence diagram
+### sequence diagram
 
 Here's a sequence diagram of our `Hello` future.
 
-![Sequence diagram of our hello world async function.](/img/understanding-async-await-1/hello.svg)
+![Sequence diagram of our hello world async function.](/img/understanding-async-await-1/hello-sequence_diagram.svg)
+
+It looks wrong that our `async main()` function is calling `poll()` directly.
+
+But remember that main is also being `poll()`ed!
+
+So it has everything needed to call `poll()` on `Hello`.
+
+(specifically the context, but we're not worrying about the context)
 
 I'll be creating similar sequence diagrams for each of the futures we write in this series.
 
