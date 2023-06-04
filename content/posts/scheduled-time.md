@@ -97,7 +97,7 @@ Nothing looks especially wrong.
 
 (there is one thing, but we don't want to get ahead of ourselves).
 
-But perhaps the behavior isn't everything we want it to be.
+But perhaps the behaviour isn't everything we want it to be.
 
 Perhaps Task 2 is sometimes taking a long time to respond to messages from a channel.
 

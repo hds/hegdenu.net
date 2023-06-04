@@ -25,7 +25,7 @@ This tells you nothing about *where* `unwrap` panicked.
 
 This was improved for `Option::unwrap()` and `Result::unwrap()`in Rust [1.42.0](https://blog.rust-lang.org/2020/03/12/Rust-1.42.html#useful-line-numbers-in-option-and-result-panic-messages).
 
-More interestingly, the mechanism to do this was stablised in Rust [1.46.0](https://blog.rust-lang.org/2020/08/27/Rust-1.46.0.html#track_caller).
+More interestingly, the mechanism to do this was stabilised in Rust [1.46.0](https://blog.rust-lang.org/2020/08/27/Rust-1.46.0.html#track_caller).
 
 What was this mechanism? The [`track_caller`](https://doc.rust-lang.org/reference/attributes/codegen.html#the-track_caller-attribute) attribute.
 
