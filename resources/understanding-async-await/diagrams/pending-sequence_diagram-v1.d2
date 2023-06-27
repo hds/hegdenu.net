@@ -1,0 +1,15 @@
+shape: sequence_diagram
+
+main: async main()
+fn_pending: pending()
+pending: Pending
+
+main -> fn_pending.fn: pending()
+main <- fn_pending.fn: Pending {
+  style.stroke-dash: 5
+}
+
+main -> pending.future: poll()
+main <- pending.future: Pending() {
+  style.stroke-dash: 5
+}

@@ -1,0 +1,20 @@
+direction: right
+start: "Initial" {
+  shape: circle
+  width: 30
+  height: 30
+  style.fill: "#776594"
+}
+end: "Final" {
+  shape: circle
+  width: 30
+  height: 30
+  style.fill: "#776594"
+}
+Ready: Ready
+
+start -> Ready: constr. {
+  direction: down
+}
+Ready -> Ready: poll()
+Ready -> end: drop

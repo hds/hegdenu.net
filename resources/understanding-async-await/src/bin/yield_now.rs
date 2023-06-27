@@ -1,8 +1,10 @@
 #[tokio::main]
 async fn main() {
     // Function that yields back to the runtime immediately
+    println!("Before yield_now().await");
     dbg!(async_await::yield_now().await);
     dbg!(manual_future::yield_now().await);
+    println!("After yield_now().await");
 }
 
 mod async_await {

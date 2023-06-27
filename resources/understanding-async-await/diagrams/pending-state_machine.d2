@@ -1,0 +1,22 @@
+direction: right
+start: "Initial" {
+  shape: circle
+  width: 30
+  height: 30
+  style.fill: "#776594"
+}
+end: "Final" {
+  shape: circle
+  width: 30
+  height: 30
+  style.fill: "#776594"
+}
+Pending: Pending
+
+start -> Pending: constr. {
+  direction: down
+}
+Pending -> Pending: poll()
+Pending -> end: drop {
+  style.stroke-dash: 5
+}

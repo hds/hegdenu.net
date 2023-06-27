@@ -1,0 +1,45 @@
+shape: sequence_diagram
+
+runtime: Async Runtime
+main: main()
+main_task: task (main.body)
+fn_yield_now: yield_now()
+yield_now: YieldNow
+waker: Waker
+
+main.fn -> runtime.block: block_on()
+runtime.block -> main_task.poll1: poll()
+
+main_task.poll1 -> fn_yield_now.fn: yield_now()
+main_task.poll1 <- fn_yield_now.fn: YieldNow {
+  style.stroke-dash: 5
+}
+
+main_task.poll1 -> yield_now.future: poll()
+yield_now.future -> yield_now.future: self.yielded = true
+yield_now.future -> waker.fn: wake_by_ref()
+waker.fn -> runtime.block.schedule: schedule(task)
+waker.fn <- runtime.block.schedule: {
+  style.stroke-dash: 5
+}
+yield_now <- waker.fn: {
+  style.stroke-dash: 5
+}
+main_task.poll1 <- yield_now.future: Pending() {
+  style.stroke-dash: 5
+}
+runtime.block <- main_task.poll1: Pending() {
+  style.stroke-dash: 5
+}
+
+runtime.block -> main_task.poll2: poll()
+main_task.poll2 -> yield_now.future: poll()
+main_task.poll2 <- yield_now.future: Ready(()) {
+  style.stroke-dash: 5
+}
+runtime.block <- main_task.poll2: Ready(()) {
+  style.stroke-dash: 5
+}
+main.fn <- runtime.block: () {
+  style.stroke-dash: 5
+}

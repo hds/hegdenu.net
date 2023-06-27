@@ -1,0 +1,15 @@
+shape: sequence_diagram
+
+main: async main()
+fn_ready: ready()
+ready: Ready
+
+main.task -> fn_ready.fn: ready()
+main.task <- fn_ready.fn: Ready {
+  style.stroke-dash: 5
+}
+
+main.task -> ready.future: poll()
+main.task <- ready.future: Ready(()) {
+  style.stroke-dash: 5
+}
