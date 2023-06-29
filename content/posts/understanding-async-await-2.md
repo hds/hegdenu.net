@@ -2,15 +2,20 @@
 title = "how I finally understood async/await in Rust (part 2)"
 slug = "understanding-async-await-2"
 author = "hds"
-date = "2023-06-15"
-draft = true
+date = "2023-06-29"
 +++
 
 This is the second part in a series on understanding async/await in Rust.
 
-Here's the full list.
+Or rather, on how **I** understood async/await.
 
-* [part 1: why doesn’t my task do anything if I don’t await it?](@/posts/understanding-async-await-1.md) 
+As you're not me, this may or may not help you understand too.
+
+(but I hope it does)
+
+Here's the full list of posts in the series.
+
+* [part 1: why doesn’t my task do anything if I don’t await it?](@/posts/understanding-async-await-1.md)
 * [part 2: how does a pending future get woken?](#how-does-a-pending-future-get-woken) (this post right here)
 * part 3: why shouldn’t I hold a mutex guard across an await point? (coming soon)
 * part 4: why would I ever want to write a future manually? (still going to be a while)
@@ -84,7 +89,7 @@ Even though the `Ready` future is even simpler, let's check the state machine.
 
 Here it becomes clear that we don't have states in this future.
 
-Additionally, there is no handling of being (incorrectly) polled after returning `Poll::Ready`.
+Additionally, there is no handling of the future being (incorrectly) polled after returning `Poll::Ready`.
 
 All in all, it's a simple future.
 
@@ -111,7 +116,7 @@ async fn main() {
 
 If we run this, we see the expected output immediately.
 
-```text
+```
 Before ready().await
 After ready().await
 ```
@@ -133,8 +138,6 @@ In fact, other people think it's useful too.
 There's a generic version in the futures crate: [`futures::future::ready`](https://docs.rs/futures/latest/futures/future/fn.ready.html)
 
 But we want to know about **not** returning `Poll::Ready`.
-
-But before we get there, 
 
 So let's have a look!
 
@@ -209,13 +212,13 @@ This makes backwards compatibility easier.
 
 We can go further than this.
 
-We don't need to declare that we're returning our type from our function at all.
+We don't need to declare that we're returning our type from the function at all.
 
 We could instead return *something* that implements the `Future` trait.
 
 Because the `Future` trait has the associated `Output` type, we need to specify that too.
 
-But that's all.
+But that's everything.
 
 Let's rewrite our `pending` function in this way.
 
@@ -274,7 +277,9 @@ It won't block the execution of the thread.
 
 But it won't go any further.
 
-Before we answer that question, let's formalise our state machine.
+Let's check our state machine.
+
+Maybe the state machine can explain what's happening.
 
 ![State machine of the Pending future.](/img/understanding-async-await-2/pending-state_machine.svg)
 
@@ -284,17 +289,25 @@ This is to indicate that this object will likely never be dropped.
 
 We don't really have a good way to show this on the sequence diagram.
 
-So the diagram for `Pending` looks a lot like the one for `Ready`.
+(this is an observation, not based on any knowledge of what is happening)
+
+In the end, the state machine for `Pending` looks a lot like the one for `Ready`.
+
+What about the sequence diagram?
 
 ![Sequence diagram for the Pending future.](/img/understanding-async-await-2/pending-sequence_diagram-v1.svg)
 
-But why doesn't our program advance?
+This isn't very enlightening either.
+
+Why doesn't our program advance?
 
 From the sequence diagram above, it's not entirely clear.
 
 We see that our future returns `Poll::Pending` to our `async main()` function.
 
 This flow is actually a small lie.
+
+We need to dig in a bit deeper to understand what is happening.
 
 #### unwrapping async main()
 
@@ -328,7 +341,7 @@ This was done with Rust Analyzer's `Expand macro recursively` command.
 
 (I removed some clippy allows to simplify)
 
-We can now see that the body of our `async main()` function are actually placed in an `async` block.
+We can now see that the body of our `async main()` function is actually placed in an `async` block.
 
 Then a new runtime is created and given the `async` block to run.
 
@@ -350,11 +363,13 @@ We now see that it's actually the async runtime that is calling `poll()` on the 
 
 The main future awaits our `Pending` future.
 
-When the future that we `await` returns `Poll::Pending`, then that future **also** returns `Poll::Pending` back to its caller.
+There's something important to note when a future awaits some sub-future which returns `Poll::Pending`.
 
-In our case that goes back to the async runtime.
+Then the future **also** returns `Poll::Pending` back to its caller.
 
-When the task being polled returns `Poll::Pending` the task goes to sleep.
+In this case that goes back to the async runtime.
+
+When the task being polled returns `Poll::Pending` the task itself goes to sleep.
 
 (it's tired, let the poor thing rest)
 
@@ -521,10 +536,6 @@ Yielding in this context means returning control to the async runtime.
 
 So "yielding" is really just "returning `Poll::Pending`".
 
-But it means doing it in such a way that we're ready to execute again ASAP.
-
-(ASAP = as soon as possible)
-
 If we've already yielded, we return `Poll::Ready`.
 
 If we haven't, we set `yielded` to `true`.
@@ -533,7 +544,7 @@ Then we wake the waker!
 
 And finally return `Poll::Pending`.
 
-But because we've already woken our task, we indicate that we're ready to be polled again.
+But because we've already woken our task, we've indicate that we're ready to be polled again.
 
 So our task won't hang!
 
@@ -567,7 +578,7 @@ fn main() {
 
 Now we get the desired output immediately.
 
-```text
+```
 Before yield_now().await
 After yield_now().await
 ```
