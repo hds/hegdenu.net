@@ -84,7 +84,7 @@ This will not sleep.
 The compiler will immediately warn you that this won't work.
 
 
-```text
+```
    = note: futures do nothing unless you `.await` or poll them
 ```
 
@@ -141,7 +141,7 @@ async fn main() {
 
 Our output is as expected.
 
-```text
+```
 hello, world!
 ```
 
@@ -438,7 +438,7 @@ It's **exactly** the same as when `hello()` was an async function.
 
 What about the output?
 
-```text
+```
 hello, world!
 ```
 
