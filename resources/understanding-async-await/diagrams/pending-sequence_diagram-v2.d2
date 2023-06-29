@@ -5,9 +5,12 @@ main: main()
 main_task: task (main.body)
 fn_pending: pending()
 pending: Pending
+sa: (Side Effects)
 
 main.fn -> runtime.block: block_on()
 runtime.block -> main_task.fn: poll()
+
+main_task.fn -> sa: println!("Before pending().await")
 
 main_task.fn -> fn_pending.fn: pending()
 main_task.fn <- fn_pending.fn: Pending {
@@ -15,11 +18,12 @@ main_task.fn <- fn_pending.fn: Pending {
 }
 
 main_task.fn -> pending.future: poll()
-main_task.fn <- pending.future: Pending() {
+pending.future -> sa: println!("Pending: poll()")
+main_task.fn <- pending.future: Poll::Pending() {
   style.stroke-dash: 5
 }
 
-runtime.block <- main_task.fn: Pending() {
+runtime.block <- main_task.fn: Poll::Pending() {
   style.stroke-dash: 5
 }
 runtime.block -> runtime.block: park_thread()

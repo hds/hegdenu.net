@@ -6,18 +6,22 @@ main_task: task (main.body)
 fn_yield_now: yield_now()
 yield_now: YieldNow
 waker: Waker
+sa: (Side Effects)
 
 main.fn -> runtime.block: block_on()
 runtime.block -> main_task.poll1: poll()
+
+main_task.poll1 -> sa: println!("Before yield_now().await")
 
 main_task.poll1 -> fn_yield_now.fn: yield_now()
 main_task.poll1 <- fn_yield_now.fn: YieldNow {
   style.stroke-dash: 5
 }
 
-main_task.poll1 -> yield_now.future: poll()
-yield_now.future -> yield_now.future: self.yielded = true
-yield_now.future -> waker.fn: wake_by_ref()
+main_task.poll1 -> yield_now.poll1: poll()
+yield_now.poll1 -> sa: println!("YieldNow: poll()")
+yield_now.poll1 -> yield_now.poll1: self.yielded = true
+yield_now.poll1 -> waker.fn: wake_by_ref()
 waker.fn -> runtime.block.schedule: schedule(task)
 waker.fn <- runtime.block.schedule: {
   style.stroke-dash: 5
@@ -25,7 +29,7 @@ waker.fn <- runtime.block.schedule: {
 yield_now <- waker.fn: {
   style.stroke-dash: 5
 }
-main_task.poll1 <- yield_now.future: Pending() {
+main_task.poll1 <- yield_now.poll1: Pending() {
   style.stroke-dash: 5
 }
 runtime.block <- main_task.poll1: Pending() {
@@ -33,10 +37,13 @@ runtime.block <- main_task.poll1: Pending() {
 }
 
 runtime.block -> main_task.poll2: poll()
-main_task.poll2 -> yield_now.future: poll()
-main_task.poll2 <- yield_now.future: Ready(()) {
+main_task.poll2 -> yield_now.poll2: poll()
+yield_now.poll2 -> sa: println!("YieldNow: poll()")
+main_task.poll2 <- yield_now.poll2: Ready(()) {
   style.stroke-dash: 5
 }
+main_task.poll2 -> sa: println!("After yield_now().await")
+
 runtime.block <- main_task.poll2: Ready(()) {
   style.stroke-dash: 5
 }

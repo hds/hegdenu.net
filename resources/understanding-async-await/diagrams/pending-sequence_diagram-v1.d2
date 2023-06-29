@@ -3,13 +3,17 @@ shape: sequence_diagram
 main: async main()
 fn_pending: pending()
 pending: Pending
+sa: (Side Effects)
 
-main -> fn_pending.fn: pending()
-main <- fn_pending.fn: Pending {
+main.task -> sa: println!("Before pending().await")
+
+main.task -> fn_pending.fn: pending()
+main.task <- fn_pending.fn: Pending {
   style.stroke-dash: 5
 }
 
-main -> pending.future: poll()
-main <- pending.future: Pending() {
+main.task -> pending.future: poll()
+pending.future -> sa: println!("Pending: poll()")
+main.task <- pending.future: Poll::Pending() {
   style.stroke-dash: 5
 }

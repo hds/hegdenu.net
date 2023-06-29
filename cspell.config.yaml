@@ -4,6 +4,7 @@ dictionaryDefinitions: []
 dictionaries:
   - en-GB
 words:
+  - println
   - struct
   - waker
   - wakers

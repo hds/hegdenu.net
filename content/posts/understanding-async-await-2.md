@@ -68,6 +68,7 @@ impl Future for Ready {
         self: std::pin::Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
+        println!("Ready: poll()");
         Poll::Ready(())
     }
 }
@@ -97,9 +98,13 @@ Now let's wrap our future in a function.
 
 ```rust
 fn ready() -> Ready {
-    Ready
+    Ready {}
 }
 ```
+
+(we are returning the `Ready` unit struct that implements `Future`)
+
+(not to be confused with `Poll::Ready`)
 
 Since `Ready` implements the `Future` trait, we can await this function.
 
@@ -118,6 +123,7 @@ If we run this, we see the expected output immediately.
 
 ```
 Before ready().await
+Ready: poll()
 After ready().await
 ```
 
@@ -165,6 +171,7 @@ impl Future for Pending {
         self: std::pin::Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
     ) -> Poll<Self::Output> {
+        println!("Pending: poll()");
         Poll::Pending
     }
 }
@@ -180,9 +187,13 @@ As before, we'll wrap our `Pending` future in a function.
 
 ```rust
 fn pending() -> Pending {
-    Pending
+    Pending {}
 }
 ```
+
+(we are returning the `Pending` unit struct that implements `Future`)
+
+(not to be confused with `Poll::Pending`)
 
 ### aside: why do we keep wrapping futures in functions?
 
@@ -224,15 +235,11 @@ Let's rewrite our `pending` function in this way.
 
 ```rust
 fn pending() -> impl Future<Output = ()> {
-    Pending
+    Pending {}
 }
 ```
 
 Now we don't need to make `Pending` public at all!
-
-There are runtime penalties when not returning concrete types.
-
-But that is a story for another day.
 
 ### back to pending
 
@@ -263,6 +270,7 @@ First, here's the output.
 
 ```
 Before pending().await
+Pending: poll()
 ```
 
 Don't wait for the program to end.
@@ -276,6 +284,10 @@ It won't use a lot of CPU.
 It won't block the execution of the thread.
 
 But it won't go any further.
+
+And what is also clear is that `poll()` only gets called once!
+
+Our future is never polled again after returning `Poll::Pending`.
 
 Let's check our state machine.
 
@@ -304,6 +316,8 @@ Why doesn't our program advance?
 From the sequence diagram above, it's not entirely clear.
 
 We see that our future returns `Poll::Pending` to our `async main()` function.
+
+But we don't see the `println!` invocation that follows.
 
 This flow is actually a small lie.
 
@@ -515,6 +529,7 @@ impl Future for YieldNow {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Self::Output> {
+        println!("YieldNow: poll()");
         if self.yielded == true {
             return Poll::Ready(());
         }
@@ -580,10 +595,14 @@ Now we get the desired output immediately.
 
 ```
 Before yield_now().await
+YieldNow: poll()
+YieldNow: poll()
 After yield_now().await
 ```
 
 No more hanging!
+
+And we can clearly see that `poll()` gets called twice on `YieldNow`.
 
 We've written our first future with a waker.
 
@@ -666,3 +685,13 @@ And it returns the value from our future.
 In this case there is no value, so it returns the unit type.
 
 And now we understand how a pending future gets woken!
+
+### thanks
+
+I got some fantastic reviews and feedback on this post.
+
+I'd like to thank the following people for taking the time to read this post.
+
+And for then going the extra mile and providing insightful feedback which improved it to no end.
+
+<insert names here>

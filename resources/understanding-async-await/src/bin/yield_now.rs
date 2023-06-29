@@ -32,6 +32,7 @@ mod manual_future {
             mut self: std::pin::Pin<&mut Self>,
             cx: &mut std::task::Context<'_>,
         ) -> Poll<Self::Output> {
+            println!("YieldNow: poll()");
             if self.yielded == true {
                 return Poll::Ready(());
             }

@@ -14,7 +14,7 @@ async fn main() {
 }
 
 fn ready() -> Ready {
-    Ready
+    Ready {}
 }
 
 struct Ready;
@@ -26,12 +26,13 @@ impl Future for Ready {
         self: std::pin::Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
+        println!("Ready: poll()");
         Poll::Ready(())
     }
 }
 
 fn pending() -> impl Future<Output = ()> {
-    Pending
+    Pending {}
 }
 
 struct Pending;
@@ -43,6 +44,7 @@ impl Future for Pending {
         self: std::pin::Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
     ) -> Poll<Self::Output> {
+        println!("Pending: poll()");
         Poll::Pending
     }
 }
