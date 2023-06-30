@@ -289,6 +289,14 @@ And what is also clear is that `poll()` only gets called once!
 
 Our future is never polled again after returning `Poll::Pending`.
 
+It's true that this future seems broken in all sorts of ways.
+
+But it can be useful in certain scenarios, like tests.
+
+And just like our `ready()` example, there's a generic version in the `futures` crate: [futures::future::pending](https://docs.rs/futures/latest/futures/future/fn.pending.html).
+
+Back to why `Pending` is hanging our program.
+
 Let's check our state machine.
 
 Maybe the state machine can explain what's happening.
