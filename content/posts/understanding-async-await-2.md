@@ -501,7 +501,21 @@ We're all about easy.
 
 So let's do this the easiest way possible.
 
-And that is to wake our task before returning pending.
+We need to make 2 changes to our `Pending` future.
+
+Change 1 is to return `Poll::Pending` only once.
+
+From the second call to `poll()`, we will instead return `Poll::Ready`.
+
+But this by itself isn't enough.
+
+As we've seen, `poll()` won't get called again until the task gets woken.
+
+So change 2 is to wake our task.
+
+And we can do this before we return `Poll::Pending`.
+
+(which is the easiest way)
 
 (this is called a [self wake](https://github.com/tokio-rs/console/blob/2de5b68d1a00a77d03a4817f955f385e494368bd/console-subscriber/src/stats.rs#L65) in `tokio-console`, in case you were wondering)
 
@@ -688,10 +702,6 @@ And now we understand how a pending future gets woken!
 
 ### thanks
 
-I got some fantastic reviews and feedback on this post.
+A huge thank-you to [arriven](https://blog.arriven.wtf/), [Conrad Ludgate](https://github.com/conradludgate), and [sak96](https://sak96.github.io/) for reviews and suggestions!
 
-I'd like to thank the following people for taking the time to read this post.
-
-And for then going the extra mile and providing insightful feedback which improved it to no end.
-
-<insert names here>
+(in alphabetical order)
