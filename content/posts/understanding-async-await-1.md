@@ -153,7 +153,7 @@ But why?
 
 Let's write our own future that does this.
 
-Specifically, we'll be implementing the trait [std::futures::Future](https://doc.rust-lang.org/std/future/trait.Future.html).
+Specifically, we'll be implementing the trait [std::future::Future](https://doc.rust-lang.org/std/future/trait.Future.html).
 
 What's a future?
 
@@ -238,7 +238,7 @@ To fix that, we need to implement the Future trait.
 
 ### aside: the easy bits of the Future trait
 
-We're going to just look at the easy bits of the [`std::futures::Future`](https://doc.rust-lang.org/std/future/trait.Future.html) trait.
+We're going to just look at the easy bits of the [`std::future::Future`](https://doc.rust-lang.org/std/future/trait.Future.html) trait.
 
 First, let's look at the trait:
 
@@ -288,7 +288,7 @@ Skipping over the hard bits makes this easier.
 Let's look at the implementation.
 
 ```rust
-use std::{futures::Future, pin::Pin, task::Context};
+use std::{future::Future, pin::Pin, task::Context};
 
 impl Future for Hello {
     type Output = ();
