@@ -66,6 +66,7 @@ Some other guides that I particularly liked are:
 
 * [Let's talk about this async](https://conradludgate.com/posts/async) by Conrad Ludgate
 * [Pin and suffering](https://fasterthanli.me/articles/pin-and-suffering) by Amos (fasterthanlime)
+* [How to think about `async`/`await` in Rust](https://cliffle.com/blog/async-inversion/) by Cliff L. Biffle
 
 ### why doesn’t my task do anything if I don’t await it?
 
