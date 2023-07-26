@@ -2,22 +2,19 @@
 async fn main() {
     let data = Arc::new(Mutex::new(0_u64));
 
-    tokio::spawn(sleepless_exclusive_value(Arc::clone(&data)));
-    exclusive_value_sleep(Arc::clone(&data))
+    tokio::spawn(yieldless_mutex_access(Arc::clone(&data)));
+    hold_mutex_guard(Arc::clone(&data))
         .await
         .expect("failed to perform operation");
 }
 
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::sync::{Arc, Mutex};
 
-async fn exclusive_value_sleep(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
+async fn hold_mutex_guard(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
     let mut guard = data.lock().map_err(|_| DataAccessError {})?;
     println!("existing value: {}", *guard);
 
-    tokio::time::sleep(Duration::from_millis(10)).await;
+    tokio::task::yield_now().await;
 
     *guard = *guard + 1;
     println!("new value: {}", *guard);
@@ -25,7 +22,7 @@ async fn exclusive_value_sleep(data: Arc<Mutex<u64>>) -> Result<(), DataAccessEr
     Ok(())
 }
 
-async fn sleepless_exclusive_value(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
+async fn yieldless_mutex_access(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
     let mut guard = data.lock().map_err(|_| DataAccessError {})?;
     println!("existing value: {}", *guard);
 

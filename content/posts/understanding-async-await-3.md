@@ -59,7 +59,7 @@ TODO: explain how mutex guards work in rust
 
 Link [`std::sync::Mutex`](https://doc.rust-lang.org/std/sync/struct.Mutex.html).
 
-### exclusive-value-sleep future
+### hold-mutex-guard async function
 
 So let's imagine that we've got a use case where we want a mutex held across an await point.
 
@@ -73,23 +73,22 @@ I'm sorry I couldn't come up with a more convincing example.
 
 But this will do.
 
-Now, let's replace our async shared resource with an async sleep.
+Now, let's replace our async shared resource with yielding back to the runtime.
 
 Because we don't actually care about what it is.
+
+(this will make things simpler later on)
 
 Here's our async function.
 
 ```rust
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::sync::{Arc, Mutex};
 
-async fn exclusive_value_sleep(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
-    let mut guard = data.lock().map_err(|_| MyError {})?;
+async fn hold_mutex_guard(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
+    let mut guard = data.lock().map_err(|_| DataAccessError {})?;
     println!("existing value: {}", *guard);
 
-    tokio::time::sleep(Duration::from_millis(10)).await;
+    tokio::task::yield_now().await;
 
     *guard = *guard + 1;
     println!("new value: {}", *guard);
@@ -144,7 +143,9 @@ We print out the value of our shared data.
 
 Now we "access our async resource".
 
-(actually we sleep for 10 milliseconds)
+(actually we just yield back to the runtime)
+
+(we looked at [`yield_now` in part 2](@/posts/understanding-async-await-2.md#yield-now))
 
 Then update the value of the shared data.
 
@@ -187,7 +188,7 @@ If you put all of this into a project, it will compile.
 
 So let's execute it.
 
-### running the exclusive-value-sleep future
+### running the hold-mutex-guard async function
 
 Let's call our future.
 
@@ -206,7 +207,7 @@ Our nice simple main function.
 async fn main() {
     let data = Arc::new(Mutex::new(0_u64));
 
-    exclusive_value_sleep(Arc::clone(&data))
+    hold_mutex_guard(Arc::clone(&data))
         .await
         .expect("failed to perform operation");
 }
@@ -282,8 +283,8 @@ Let's spawn a couple of instances of our async function!
 async fn main() {
     let data = Arc::new(Mutex::new(0_u64));
 
-    tokio::spawn(exclusive_value_sleep(Arc::clone(&data)));
-    tokio::spawn(exclusive_value_sleep(Arc::clone(&data)));
+    tokio::spawn(hold_mutex_guard(Arc::clone(&data)));
+    tokio::spawn(hold_mutex_guard(Arc::clone(&data)));
 }
 ```
 
@@ -309,27 +310,26 @@ And now the errors are a bit more manageable.
 error: future cannot be sent between threads safely
    --> resources/understanding-async-await/src/bin/mutex_guard_async.rs:5:18
     |
-5   |     tokio::spawn(exclusive_value_sleep(Arc::clone(&data)));
-    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ future returned by `exclusive_value_sleep` is not `Send`
+5   |     tokio::spawn(hold_mutex_guard(Arc::clone(&data)));
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ future returned by `hold_mutex_guard` is not `Send`
     |
     = help: within `impl Future<Output = Result<(), DataAccessError>>`, the trait `Send` is not implemented for `std::sync::MutexGuard<'_, u64>`
 note: future is not `Send` as this value is used across an await
-   --> resources/understanding-async-await/src/bin/mutex_guard_async.rs:18:50
+   --> resources/understanding-async-await/src/bin/mutex_guard_async.rs:15:29
     |
-15  |     let mut guard = data.lock().map_err(|_| DataAccessError {})?;
+12  |     let mut guard = data.lock().map_err(|_| DataAccessError {})?;
     |         --------- has type `std::sync::MutexGuard<'_, u64>` which is not `Send`
 ...
-18  |     tokio::time::sleep(Duration::from_millis(10)).await;
-    |                                                  ^^^^^^ await occurs here, with `mut guard` maybe used later
+15  |     tokio::task::yield_now().await;
+    |                             ^^^^^^ await occurs here, with `mut guard` maybe used later
 ...
-24  | }
+21  | }
     | - `mut guard` is later dropped here
 note: required by a bound in `tokio::spawn`
    --> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.27.0/src/task/spawn.rs:163:21
     |
 163 |         T: Future + Send + 'static,
     |                     ^^^^ required by this bound in `spawn`
-
 ```
 
 OK, it's really just one error.
@@ -358,7 +358,7 @@ It then points us to `mut guard`.
 
 And tells us that it isn't `Send`.
 
-And then points to the `.await` where we sleep as the offending await point.
+And then points to the `.await` where we yield as the offending await point.
 
 (rust errors are amazing!)
 
@@ -464,14 +464,14 @@ We just need to try to lock that mutex from somewhere else.
 
 So let's create another async function that we can spawn.
 
-It's the same as the previous one, but without the sleep.
+It's the same as the previous one, but without the yield.
 
 (and therefore, without an await point)
 
 (so it's not really async)
 
 ```rust
-async fn sleepless_exclusive_value(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
+async fn yieldless_mutex_access(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
     let mut guard = data.lock().map_err(|_| DataAccessError {})?;
     println!("existing value: {}", *guard);
 
@@ -503,8 +503,8 @@ So it's easier to create certain situations.
 async fn main() {
     let data = Arc::new(Mutex::new(0_u64));
 
-    tokio::spawn(sleepless_exclusive_value(Arc::clone(&data)));
-    exclusive_value_sleep(Arc::clone(&data))
+    tokio::spawn(yieldless_mutex_access(Arc::clone(&data)));
+    hold_mutex_guard(Arc::clone(&data))
         .await
         .expect("failed to perform operation");
 }
@@ -538,3 +538,234 @@ So we'll go back to our old tricks.
 
 And write a custom `Future` for our async function.
 
+### hold-mutex-guard future
+
+
+Now we're going to implement a manual future that does the same.
+
+I almost didn't manage this one.
+
+(in fact, I **didn't** manage it)
+
+(luckily I know some smart people who helped me)
+
+([thank you!](#thanks))
+
+Now, on to that future.
+
+Futures are generally implemented as state machines.
+
+(we've seen this a few times before)
+
+We'll need an initial state.
+
+(before being polled)
+
+And we like to have an explicit completed state.
+
+(which will panic if polled again)
+
+And in the middle, a state after having yielded once.
+
+With that in mind, our future could look like the following.
+
+```rust
+use std::sync::{Arc, Mutex};
+
+enum HoldMutexGuard<'a> {
+    Init {
+        data: Arc<Mutex<u64>>,
+    },
+    Yielded {
+        guard: MutexGuard<'a, u64>,
+        _data: Arc<Mutex<u64>>,
+    },
+    Done,
+}
+```
+
+Our initial state needs the parameters that the async function receives.
+
+The yielded state is going to have our guard stored in it.
+
+(this is the bit we're doing wrong, of course)
+
+We also need the Arc containing our data.
+
+This matches what our async function would have had generated.
+
+(more on why later)
+
+The `MutexGuard` requires a lifetime generic parameter.
+
+(which is a total pain by the way)
+
+(but that's the point, it's there for a good reason)
+
+That means that our future will also need a lifetime generic parameter.
+
+We'll wrap the soon-to-be-future up in a function.
+
+([why? see part 2](@/posts/understanding-async-await-2.md#aside-why-do-we-keep-wrapping-futures-in-functions))
+
+```rust
+fn hold_mutex_guard(
+    data: Arc<Mutex<u64>>,
+) -> impl Future<Output = Result<(), DataAccessError>> {
+    HoldMutexGuard::Init { data }
+}
+```
+
+We're using the same error type too.
+
+Before we implement anything, let's pause.
+
+And take a look at the state machine for `HoldMutexGuard`.
+
+![State machine of the HoldMutexGuard future.](/img/understanding-async-await-3/hold_mutex_guard-state_machine.svg)
+
+It's not much more complicated than [`YieldNow`'s state machine](@/posts/understanding-async-await-2.md#yield-now).
+
+The future starts in the `Init` state.
+
+When polled the first time, it returns `Poll::Pending`.
+
+And moves to the `Yielded` state.
+
+When polled the second time, it returns `Poll::Ready`.
+
+And moves to the `Done` state.
+
+The implementation is a little more complex though.
+
+### implementing the hold-mutex-state future
+
+Now onto the good stuff.
+
+Implementing `Future`.
+
+```rust
+impl<'a> Future for HoldMutexGuard<'a> {
+    type Output = Result<(), DataAccessError>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let state = &mut *self;
+        match state {
+            Self::Init { data } => {
+                let guard = unsafe {
+                    // SAFETY: We will hold on to the Arc containing the mutex as long
+                    //         as we hold onto the guard.
+                    std::mem::transmute::<MutexGuard<'_, u64>, MutexGuard<'static, u64>>(
+                        data.lock().map_err(|_| DataAccessError {})?,
+                    )
+                };
+                println!("existing value: {}", *guard);
+
+                cx.waker().wake_by_ref();
+                *state = Self::Yielded {
+                    guard: guard,
+                    _data: Arc::clone(data),
+                };
+
+                Poll::Pending
+            }
+            Self::Yielded { guard, _data } => {
+                println!("new value: {}", *guard);
+
+                *state = Self::Done;
+
+                Poll::Ready(Ok(()))
+            }
+            Self::Done => panic!("Please stop polling me!"),
+        }
+    }
+}
+```
+
+It's not as bad as it looks!
+
+Our `Output` associated type is the same as our function return parameter.
+
+That's easy.
+
+So let's look at the implementation for `poll()`.
+
+Wait, wait, wait.
+
+What is this beast?
+
+```rust
+let state = &mut *self;
+```
+
+The borrow checker has lots of fun with anything to do with `Pin`.
+
+(but we're still not going to discuss pinning today)
+
+We need to modify `self`.
+
+But it's pinned.
+
+And we need to reference parts of it as well.
+
+So we dereference our pinned self.
+
+Then take a mutable reference.
+
+(this is all legit and the borrow checker is happy)
+
+The first time we get polled, we'll be in the state `Init`.
+
+So we'll do everything up to the `yield_now` call in our async function.
+
+Unfortunately we come up against the borrow checker again.
+
+We can't just take our `MutexGuard` and store it next to the `Mutex` it's guarding.
+
+That would create a self-referential structure.
+
+And Rust is all against those.
+
+In fact it's so against those that we have to use `unsafe` to do what we want.
+
+(admittedly, what we're trying to do is wrong from the start)
+
+(so this isn't that surprising)
+
+What we're going to do is create a `MutexGuard` with a `'static` lifetime.
+
+That means, we're telling the borrow checker that it will last as long as it needs to.
+
+In this case, this is legitimately OK.
+
+This is why we keep the Arc stored even though we don't need it.
+
+As long as we hold that Arc to the `Mutex`, the `MutexGuard` can be valid.
+
+To do this magic, we use [`std::mem::transmute`](https://doc.rust-lang.org/std/mem/fn.transmute.html).
+
+(it's alchemy!)
+
+This will reinterpret the bits of one value as another.
+
+This allows us to take the `MutexGuard` with some other lifetime.
+
+And turn it into (transmute) a `MutexGuard` with a static lifetime.
+
+If this doesn't make too much sense, don't worry.
+
+It's not necessary to understand the rest.
+
+But keep in mind that Rust wants to protect us here.
+
+
+
+
+
+
+
+### thanks
+
+A huge thank-you to [Conrad Ludgate](https://github.com/conradludgate) and [Predrag Gruevski](get a link and check name) for help in writing the manual future. This post would have been cut short without that.
+
+(in alphabetical order)

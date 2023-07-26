@@ -1,19 +1,15 @@
 use std::{
     future::Future,
     pin::Pin,
-    sync::{Arc, Mutex, MutexGuard},
     task::{Context, Poll},
-    time::Duration,
 };
-
-use tokio::time::Sleep;
 
 fn main() {
     let body = async {
         let data = Arc::new(Mutex::new(0_u64));
 
-        tokio::spawn(sleepless_exclusive_value(Arc::clone(&data)));
-        exclusive_value_sleep(Arc::clone(&data))
+        tokio::spawn(yieldless_mutex_access(Arc::clone(&data)));
+        hold_mutex_guard(Arc::clone(&data))
             .await
             .expect("failed to perform operation");
     };
@@ -25,80 +21,60 @@ fn main() {
         .block_on(body);
 }
 
-fn exclusive_value_sleep(
-    data: Arc<Mutex<u64>>,
-) -> impl Future<Output = Result<(), DataAccessError>> {
-    ExclusiveValueSleep::Init { data }
+fn hold_mutex_guard(data: Arc<Mutex<u64>>) -> impl Future<Output = Result<(), DataAccessError>> {
+    HoldMutexGuard::Init { data }
 }
 
-enum ExclusiveValueSleep<'a> {
+use std::sync::{Arc, Mutex, MutexGuard};
+
+enum HoldMutexGuard<'a> {
     Init {
         data: Arc<Mutex<u64>>,
     },
-    Sleep {
-        data: Arc<Mutex<u64>>,
-        sleep: Pin<Box<Sleep>>,
+    Yielded {
         guard: MutexGuard<'a, u64>,
-    },
-    AfterSleep {
         _data: Arc<Mutex<u64>>,
-        guard: MutexGuard<'a, u64>,
     },
     Done,
 }
 
-impl<'a> Future for ExclusiveValueSleep<'a> {
+impl<'a> Future for HoldMutexGuard<'a> {
     type Output = Result<(), DataAccessError>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        loop {
-            let this = std::mem::replace(&mut *self, Self::Done);
-            let (new, return_value) = match this {
-                Self::Init { data } => {
-                    let guard = unsafe {
-                        // SAFETY: We will hold on to the Arc containing the mutex as long
-                        //         as we hold onto the guard.
-                        std::mem::transmute::<MutexGuard<'_, u64>, MutexGuard<'static, u64>>(
-                            data.lock().map_err(|_| DataAccessError {})?,
-                        )
-                    };
-                    println!("existing value: {}", *guard);
-
-                    (
-                        Self::Sleep {
-                            data,
-                            sleep: Box::pin(tokio::time::sleep(Duration::from_millis(10))),
-                            guard: guard,
-                        },
-                        None,
+        let state = &mut *self;
+        match state {
+            Self::Init { data } => {
+                let guard = unsafe {
+                    // SAFETY: We will hold on to the Arc containing the mutex as long
+                    //         as we hold onto the guard.
+                    std::mem::transmute::<MutexGuard<'_, u64>, MutexGuard<'static, u64>>(
+                        data.lock().map_err(|_| DataAccessError {})?,
                     )
-                }
-                Self::Sleep {
-                    data,
-                    mut sleep,
-                    guard,
-                } => {
-                    let pinned_sleep = Pin::new(&mut sleep);
-                    match pinned_sleep.poll(cx) {
-                        Poll::Pending => (Self::Sleep { data, sleep, guard }, Some(Poll::Pending)),
-                        Poll::Ready(_) => (Self::AfterSleep { _data: data, guard }, None),
-                    }
-                }
-                Self::AfterSleep { _data, guard } => {
-                    println!("new value: {}", *guard);
-                    (Self::Done, Some(Poll::Ready(Ok(()))))
-                }
-                Self::Done => panic!("Please stop polling me!"),
-            };
-            _ = std::mem::replace(&mut *self, new);
-            if let Some(poll) = return_value {
-                return poll;
+                };
+                println!("existing value: {}", *guard);
+
+                cx.waker().wake_by_ref();
+                *state = Self::Yielded {
+                    guard: guard,
+                    _data: Arc::clone(data),
+                };
+
+                Poll::Pending
             }
+            Self::Yielded { guard, _data } => {
+                println!("new value: {}", *guard);
+
+                *state = Self::Done;
+
+                Poll::Ready(Ok(()))
+            }
+            Self::Done => panic!("Please stop polling me!"),
         }
     }
 }
 
-async fn sleepless_exclusive_value(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
+async fn yieldless_mutex_access(data: Arc<Mutex<u64>>) -> Result<(), DataAccessError> {
     let mut guard = data.lock().map_err(|_| DataAccessError {})?;
     println!("existing value: {}", *guard);
 
