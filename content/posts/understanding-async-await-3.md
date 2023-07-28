@@ -246,9 +246,9 @@ Because then it will run successively.
 
 However, there is a way to run multiple futures concurrently on an async runtime.
 
-It's usually called `spawn`.
+It's called `spawn`, like the function to create a new thread.
 
-In the case of Tokio, it is called `spawn`, [`tokio::spawn`](https://docs.rs/tokio/latest/tokio/task/fn.spawn.html).
+In the case of Tokio, it is [`tokio::spawn`](https://docs.rs/tokio/latest/tokio/task/fn.spawn.html).
 
 (technically, it's `tokio::task::spawn`)
 
@@ -261,6 +261,96 @@ The future will be set to execute immediately in a new task.
 In fact, this is how we end up with more than one task.
 
 (I know, we're up to part 3 and we've only just discovered multiple tasks)
+
+**But.**
+
+The new task may not get polled immediately.
+
+It depends on how occupied the async runtime's workers are.
+
+Let's create a simple example.
+
+We'll use async/await syntax for brevity.
+
+```rust
+// `flavor`` has to be one of these values, not both. This code won't compile.
+#[tokio::main(flavor = "current_thread|multi_thread")]
+async fn main() {
+    tokio::spawn(spawn_again());
+    do_nothing().await;
+
+    tokio::task::yield_now().await
+    tokio::task::yield_now().await
+
+    // ... Let's pretend there's more here and we're not returning yet.
+}
+
+async fn spawn_again() {
+    tokio::spawn(do_nothing());
+}
+
+async fn do_nothing() {
+    // There's nothing here
+}
+```
+
+Here our `async main` function spawns a task with `spawn_again`
+
+(an async function which will spawn another task)
+
+And then it awaits an async function `do_nothing`.
+
+(which does nothing)
+
+The async function `spawn_again` spawns a task with `do_nothing`.
+
+Let's see how this might work with different runtime schedulers.
+
+An async runtime may only have one worker.
+
+For example the [current-thread scheduler](https://docs.rs/tokio/latest/tokio/runtime/index.html#current-thread-scheduler) in Tokio.
+
+Then we could spawn a task from within another task.
+
+But it wouldn't get polled until the current task yields to the scheduler.
+
+(or maybe later if other tasks are waiting)
+
+This is how it would look as a sequence diagram.
+
+![Sequence diagram representing the 3 futures in the code above being polled by a current thread scheduler.](/img/understanding-async-await-3/spawn_current_thread-sequence_diagram.svg)
+
+Note how the tasks that get spawned need to wait until the runtime is free.
+
+Then they will get polled.
+
+But when a task `.await`s a future, there is no new task.
+
+And it gets polled immediately.
+
+Instead, a runtime may have multiple workers.
+
+(which means multiple threads)
+
+Like the [multi-thread scheduler](https://docs.rs/tokio/latest/tokio/runtime/index.html#multi-thread-scheduler) in Tokio.
+
+Then there can be as many tasks being polled in parallel as there are workers.
+
+Let's take a runtime with 2 workers and see how that would look as a sequence diagram.
+
+Note that there is now parallelism.
+
+So the exact order of operations may vary.
+
+![Sequence diagram representing the 3 futures in the code above being polled by a multi-thread scheduler.](/img/understanding-async-await-3/spawn_multi_thread-sequence_diagram.svg)
+
+This diagram contains a bit of a lie concerning how Tokio works.
+
+Tasks are actually spawned onto the same worker that spawning task is running on.
+
+If another worker is idle, it may steal tasks from the first worker's queue.
+
+(but all this is out of scope, so we'll continue)
 
 Spawn returns a join handle: [`tokio::task::JoinHandle`](https://docs.rs/tokio/latest/tokio/task/struct.JoinHandle.html).
 
@@ -758,11 +848,172 @@ It's not necessary to understand the rest.
 
 But keep in mind that Rust wants to protect us here.
 
+And we are very carefully going around that protection.
 
+(here be dragons, etc.)
 
+Once we have our `MutexGuard`, we print the value.
 
+We're now going to yield back to the runtime.
 
+So just like in our `YieldNow` future, we need to wake our waker first.
 
+Otherwise our future will never be polled again.
+
+Then we set the next state: `Yielded`.
+
+(using that funny `&mut *self`)
+
+And return `Poll::Pending`.
+
+The next time our future gets polled, we are already in state `Yielded`.
+
+We will print the value from the `MutexGuard`.
+
+Then move to state `Done` and return `Poll::Ready`.
+
+At that point, the `MutexGuard` will get dropped.
+
+The important bit here is that we hold on to the `MutexGuard` **and return**.
+
+This is what our async function is doing too.
+
+But we don't see it so clearly.
+
+We just see `.await`.
+
+But every time your async function contains an await point, that is the future returning.
+
+And before returning, it has to store all the in-scope local variables in itself.
+
+### hanging around again
+
+Let's reproduce that hanging program again with our future.
+
+Just to make sure we can.
+
+We're going to spawn the same async function to help provoke the hang as we did before.
+
+That's `yieldless_mutex_access` as described in [back to trying to break things](#back-to-trying-to-break-things).
+
+(the one that doesn't actually do anything async)
+
+And we'll [unwrap async main()](@/posts/understanding-async-await-2.md#unwrapping-async-main) straight away.
+
+(I told you we would get to this)
+
+This leaves us with an unwrapped version of the same code we used before.
+
+```rust
+fn main() {
+    let body = async {
+        let data = Arc::new(Mutex::new(0_u64));
+
+        tokio::spawn(yieldless_mutex_access(Arc::clone(&data)));
+        hold_mutex_guard(Arc::clone(&data))
+            .await
+            .expect("failed to perform operation");
+    };
+
+    return tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("failed to build runtime")
+        .block_on(body);
+}
+```
+
+There is one important thing to note here.
+
+We're creating a current-thread runtime.
+
+Same as before.
+
+(this makes triggering hanging behaviour easier)
+
+(and we do like easy)
+
+Let's have a look at the sequence diagram!
+
+Because that's going to help us see what's happening.
+
+![Sequence diagram of the HoldMutexGuard future.](/img/understanding-async-await-3/hold_mutex_guard-sequence_diagram.svg)
+
+The important point is the two futures.
+
+`YieldlessMutexGuard` gets spawned first.
+
+Then `HoldMutexGuard` gets awaited.
+
+As we saw when we introduced [spawn](#aside-spawn), the new task has to wait.
+
+The runtime is single threaded.
+
+So the new task created with `YieldlessMutexGuard` must wait until the current task yields to the runtime.
+
+This means that the `HoldMutexGuard` future is run first.
+
+It locks the mutex and receives a `MutexGuard`.
+
+It wakes it's waker.
+
+(so it will get polled again after returning `Poll::Pending`)
+
+Then changes state to `Yielded`, storing the `MutexGuard` in itself.
+
+And then returns `Poll::Pending`, yielding to the runtime.
+
+Now the runtime can poll the next task.
+
+The one spawned with `YieldlessMutexGuard`.
+
+This task locks the mutex.
+
+Well, it tries.
+
+But the mutex is already locked, so it blocks until it gets unlocked.
+
+Since the runtime only has one thread, this blocks the entire runtime.
+
+And causes a deadlock.
+
+We saw this before with our async function.
+
+And now we understand why!
+
+### now what?
+
+So, what **should** we do if we want to control access to some shared async resource?
+
+The obvious answer is to use the async mutex in tokio.
+
+It's called [`tokio::sync::Mutex`](https://docs.rs/tokio/latest/tokio/sync/struct.Mutex.html).
+
+It is safe to hold this mutex's guard across await points.
+
+This is because its [`lock()`](https://docs.rs/tokio/latest/tokio/sync/struct.Mutex.html#method.lock) method is async.
+
+So it won't block the thread while waiting for the lock.
+
+And so some other task holding the lock can make progress.
+
+(and release the lock)
+
+However, it is often better not to use a mutex at all.
+
+Instead, give full ownership of your shared resource to a single task.
+
+And communicate with that task via [message passing](https://docs.rs/tokio/latest/tokio/sync/index.html#message-passing).
+
+This is a topic for a whole other blog post though.
+
+So we won't go into it today.
+
+In part 4, we will look at message passing and channels.
+
+But for that, you'll have to wait.
+
+See you next time!
 
 ### thanks
 

@@ -1,0 +1,44 @@
+shape: sequence_diagram
+
+runtime: Async Runtime
+worker1: Worker 1
+worker2: Worker 2
+main: main()
+main_task: task (main.body)
+future1: task (spawn_again)
+future2: task (do_nothing)
+future3: do_nothing
+
+main.fn -> runtime.block: block_on()
+runtime.block -> worker1: create
+runtime.block -> worker2: create
+runtime.block -> worker1.block: schedule(main.body)
+
+worker1.block -> main_task.poll1: poll()
+main_task.poll1 -> runtime.block: spawn(Future1)
+runtime.block -> worker2.block: schedule(Future1)
+worker2.block -> future1.poll1: poll()
+main_task.poll1 -> future3.poll1: poll()
+main_task.poll1 <- future3.poll1: Poll::Ready
+
+main_task.poll1 -> main_task.poll1: yield_now()
+worker1.block <- main_task.poll1: Poll::Pending {
+  style.stroke-dash: 5
+}
+
+future1.poll1 -> runtime.block: spawn(Future2)
+
+runtime.block -> worker1.block: schedule(Future2)
+worker1.block -> future2.poll1: poll()
+worker2.block <- future1.poll1: Poll::Ready {
+  style.stroke-dash: 5
+}
+worker1.block <- future2.poll1: Poll::Ready {
+  style.stroke-dash: 5
+}
+
+worker1.block -> main_task.poll2: poll()
+main_task.poll2 -> main_task.poll2: yield_now()
+worker1.block <- main_task.poll2: Poll::Pending {
+  style.stroke-dash: 5
+}
