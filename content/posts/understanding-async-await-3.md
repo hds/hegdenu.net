@@ -334,6 +334,20 @@ And print that out.
 
 And we're done!
 
+#### clippy is watching
+
+It's worth mentioning that while this code compiles, `clippy` doesn't like it.
+
+There is a [lint](https://rust-lang.github.io/rust-clippy/master/#/await_holding_lock) for holding a mutex guard across an await point.
+
+So turn on Clippy lints!
+
+We're not going to run Clippy though.
+
+Because we like living dangerously.
+
+(mostly because we're trying to do the wrong thing)
+
 ### that return type
 
 You may have noticed something.
@@ -1220,5 +1234,7 @@ See you next time!
 ### thanks
 
 A huge thank-you to [Conrad Ludgate](https://github.com/conradludgate) and [Predrag Gruevski](https://predr.ag/) for help in writing the manual future (especially that `MutexGuard` transmute). This post would have been cut short without that.
+
+Thanks to [sak96](https://sak96.github.io/) for reminding me that there is a lint for holding a guard across an await point.
 
 (in alphabetical order)
