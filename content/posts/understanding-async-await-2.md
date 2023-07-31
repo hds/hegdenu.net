@@ -17,7 +17,7 @@ Here's the full list of posts in the series.
 
 * [part 1: why doesn’t my task do anything if I don’t await it?](@/posts/understanding-async-await-1.md)
 * [part 2: how does a pending future get woken?](#how-does-a-pending-future-get-woken) (this post right here)
-* part 3: why shouldn’t I hold a mutex guard across an await point? (coming soon)
+* [part 3: why shouldn’t I hold a mutex guard across an await point?](@/posts/understanding-async-await-3.md) (now available)
 * part 4: why would I ever want to write a future manually? (still going to be a while)
 
 In the previous part, we looked at the simplest async function.
@@ -707,6 +707,10 @@ And it returns the value from our future.
 In this case there is no value, so it returns the unit type.
 
 And now we understand how a pending future gets woken!
+
+This post is part of a series.
+
+And [part 3](@/posts/understanding-async-await-3.md) is available to read right now.
 
 ### thanks
 

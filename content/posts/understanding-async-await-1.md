@@ -25,7 +25,7 @@ We'll explore them in a series of posts.
 
 * [part 1: why doesn’t my task do anything if I don’t await it?](#why-doesn-t-my-task-do-anything-if-i-don-t-await-it) (you're reading it)
 * [part 2: how does a pending future get woken?](@/posts/understanding-async-await-2.md) (now available)
-* part 3: why shouldn’t I hold a mutex guard across an await point? (coming less soon)
+* [part 3: why shouldn’t I hold a mutex guard across an await point?](@/posts/understanding-async-await-3.md) (also available)
 * part 4: why would I ever want to write a future manually? (coming a bit later)
 
 These were originally going to all go in one post.
@@ -470,4 +470,8 @@ So it has everything needed to call `poll()` on `Hello`.
 I'll be creating similar sequence diagrams for each of the futures we write in this series.
 
 Hopefully that will help tie the different concepts together.
+
+Was this interesting?
+
+Check out [part 2](@/posts/understanding-async-await-2.md).
 

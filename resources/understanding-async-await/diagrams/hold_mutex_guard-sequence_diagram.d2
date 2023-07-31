@@ -4,21 +4,16 @@ runtime: Async Runtime
 main: main()
 main_task: task (main.body)
 fn_hold_mutex_guard: hold_mutex_guard()
-fn_yieldless_mutex_access: yieldless_mutex_access()
 hold_mutex_guard: HoldMutexGuard
 waker: Waker
-yieldless_mutex_access: task (YieldlessMutexAccess)
+yieldless_mutex_access: task (yieldless_mutex_access)
 mutex: Mutex<u64>
 sa: (Side Effects)
 
 main.fn -> runtime.block: block_on()
 runtime.block -> main_task.poll1: poll()
 
-main_task.poll1 -> fn_yieldless_mutex_access.fn: yieldless_mutex_access()
-main_task.poll1 <- fn_yieldless_mutex_access.fn: <GeneratedFuture-yieldless_mutex_access> {
-  style.stroke-dash: 5
-}
-main_task.poll1 -> runtime.block: spawn(GeneratedFuture-yieldless_mutex_access)
+main_task.poll1 -> runtime.block: spawn(yieldless_mutex_access())
 main_task.poll1 <- runtime.block: JoinHandle {
   style.stroke-dash: 5
 }

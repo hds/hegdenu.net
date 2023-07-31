@@ -36,7 +36,7 @@ thread1.fn -> obj: do_something()
 thread1.fn -> guard.locked1: drop()
 guard.locked1 -> mutex.lock1: unlock()
 
-mutex.lock2 -> guard.locked2: new()
+mutex.lock2.locked -> guard.locked2: new()
 mutex.lock2 <- guard.locked2: MutexGuard {
   style.stroke-dash: 5
 }

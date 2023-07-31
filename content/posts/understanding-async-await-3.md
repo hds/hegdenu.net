@@ -3,7 +3,6 @@ title = "how I finally understood async/await in Rust (part 3)"
 slug = "understanding-async-await-3"
 author = "hds"
 date = "2023-07-31"
-draft = true
 +++
 
 This is a series on how I understood async/await in Rust.
@@ -35,7 +34,7 @@ So today we'll focus on mutex guards.
 
 ### why shouldn't I hold a mutex guard across an await point?
 
-The first thing that many people try to do in async code is share state.
+Let's assume we want to share state in async code.
 
 This is often not a good idea.
 
@@ -67,7 +66,7 @@ It's a concurrent programming primitive.
 
 It ensures that only one part of the program is doing some specific thing at a given time.
 
-Usually this is accessing some object which is shared across threads.
+Usually this is accessing an object which is shared across threads.
 
 (if you don't have multiple threads, then you don't need this sort of protection)
 
@@ -117,6 +116,8 @@ Now we can't ever lock the mutex again.
 
 #### how rust does mutexes
 
+(by the way, my English speaking brain keeps wanting the plural to be *mutices*)
+
 Instead, Rust sticks the mutex and the object it protects together.
 
 This is [`std::sync::Mutex`](https://doc.rust-lang.org/std/sync/struct.Mutex.html).
@@ -149,7 +150,7 @@ Wow, that was a lot to take in.
 
 Let's look at our previous example oxidised.
 
-(oxidised as in TODO)
+(oxidised as in using Rust standard library and conventions)
 
 ```rust
 // This is now the std library mutex
@@ -193,7 +194,7 @@ In Rust, this causes the Mutex to become poisoned.
 
 We won't go further into mutex poisoning.
 
-But if you're interested, check the [Mutex documentation](https://doc.rust-lang.org/std/sync/struct.Mutex.html#poisoning).
+But if you're interested, check the [Mutex documentation](https://doc.rust-lang.org/std/sync/struct.Mutex.html#poisoning) for more information.
 
 #### mutex sequence diagram
 
@@ -202,6 +203,8 @@ Let's try to visualise two threads accessing our protected object.
 I've simplified some things.
 
 For example, we can't actually just pass a mutex when spawning 2 threads.
+
+We need to wrap it in a smart pointer.
 
 But we'll see how to do that later.
 
@@ -221,7 +224,9 @@ Once Thread 1 drops the mutex guard, the mutex is unlocked.
 
 Then Thread 2 can obtain the lock and do its work.
 
-Now, let's get back to doing the wrong thing with that `MutexGuard` in an async context.
+Now, let's get back to using that `MutexGuard` an an async context.
+
+(and by using, I mean using it wrong)
 
 ### hold-mutex-guard async function
 
@@ -281,6 +286,8 @@ We already looked at the basics of [mutexes and mutex guards in rust](#aside-mut
 
 Finally, we need to access our mutex from multiple tasks.
 
+(this is the bit we skipped over in the aside section)
+
 So it's wrapped in a [`std::sync::Arc`](https://doc.rust-lang.org/std/sync/struct.Arc.html).
 
 An `Arc` is actually an acronym: ARC.
@@ -296,6 +303,16 @@ It can be cloned and passed around between tasks.
 All the while, giving access to the same location in memory.
 
 The location where our mutex is!
+
+Cloning an `Arc` just increments the reference counter.
+
+(atomically in this case)
+
+(the non-atomic version of Arc is [`std::rc::Rc`](https://doc.rust-lang.org/std/rc/struct.Rc.html))
+
+It doesn't clone the underlying data, which is what we want.
+
+(remember that bit about locking a different mutex not being useful)
 
 So what we do is the following.
 
@@ -313,15 +330,19 @@ Now we "access our async resource".
 
 Then update the value of the shared data.
 
+And print that out.
+
 And we're done!
 
 ### that return type
 
-Oh, you may have noticed something.
+You may have noticed something.
 
 The return type!
 
 Locking a mutex can fail.
+
+(remember poisoning)
 
 So we should return an error in this case.
 
@@ -329,7 +350,7 @@ It is good practice to make your errors explicit and minimal.
 
 So here we've defined a new error for this case.
 
-It's very simple, and I won't go into it today.
+It's very simple, and I won't go into it.
 
 But here it is for reference.
 
@@ -360,11 +381,11 @@ Or rather await it.
 
 We'll use the `#[tokio::main]` macro for brevity.
 
-But in part 2, we looked at [unwrapping async main()](@/posts/understanding-async-await-2.md#unwrapping-async-main).
+In part 2, we looked at [unwrapping async main()](@/posts/understanding-async-await-2.md#unwrapping-async-main).
 
-We'll probably unwrap it again for great clarity later on.
+We'll probably look at unwrapping it for great clarity later on.
 
-Our nice simple main function.
+For now, we have a nice simple main function.
 
 ```rust
 #[tokio::main]
@@ -470,6 +491,8 @@ The async function `spawn_again` spawns a task with `do_nothing`.
 
 Let's see how this might work with different runtime schedulers.
 
+#### spawn onto current-thread
+
 An async runtime may only have one worker.
 
 For example the [current-thread scheduler](https://docs.rs/tokio/latest/tokio/runtime/index.html#current-thread-scheduler) in Tokio.
@@ -492,6 +515,8 @@ But when a task `.await`s a future, there is no new task.
 
 And it gets polled immediately.
 
+#### spawn onto multi-thread
+
 Instead, a runtime may have multiple workers.
 
 (which means multiple threads)
@@ -510,11 +535,13 @@ So the exact order of operations may vary.
 
 This diagram contains a bit of a lie concerning how Tokio works.
 
-Tasks are actually spawned onto the same worker that spawning task is running on.
+Tasks are actually spawned onto the same worker that the spawning task is running on.
 
 If another worker is idle, it may steal tasks from the first worker's queue.
 
 (but all this is out of scope, so we'll continue)
+
+#### wait for me to finish
 
 Spawn returns a join handle: [`tokio::task::JoinHandle`](https://docs.rs/tokio/latest/tokio/task/struct.JoinHandle.html).
 
@@ -600,6 +627,8 @@ A spawned task may be started on any worker (thread).
 
 Even a current-thread runtime may have a task spawn from *another* thread.
 
+(this would mean that the task is spawned from outside the runtime, which is just fine)
+
 So this makes sense that a future **needs** to be able to be sent between threads.
 
 But why can't it?
@@ -622,7 +651,7 @@ Finally, the error goes on to tell us that it is all `spawn`'s fault!
 
 This `Send` stuff isn't magic.
 
-It is specified specifically on `tokio::spawn` by the tokio authors.
+It is specified explicitly on `tokio::spawn` by the tokio authors.
 
 Let's go an have a look at the code for it.
 
@@ -644,7 +673,7 @@ And there are some constraints on what `T` can be.
 
 In Rust, these "constraints" are called **bounds**.
 
-(ahhhh, that's what a bound is!)
+(ohhhh, that's what a bound is!)
 
 So we can see that `T` must implement `Future` and `Send` and have a `'static` lifetime.
 
@@ -764,9 +793,9 @@ async fn main() {
 }
 ```
 
-Here we spawn our `Send` async function.
+Here we spawn our `Send` async function `yieldless_mutex_access()`.
 
-And then immediately await our bad function.
+And then immediately await our bad function `hold_mutex_guard()`.
 
 Let's check the output.
 
@@ -794,8 +823,7 @@ And write a custom `Future` for our async function.
 
 ### hold-mutex-guard future
 
-
-Now we're going to implement a manual future that does the same.
+We're going to manually implement a future that does the same.
 
 I almost didn't manage this one.
 
@@ -892,7 +920,7 @@ And moves to the `Done` state.
 
 The implementation is a little more complex though.
 
-### implementing the hold-mutex-state future
+### implementing the hold-mutex-guard future
 
 Now onto the good stuff.
 
@@ -972,6 +1000,8 @@ The first time we get polled, we'll be in the state `Init`.
 
 So we'll do everything up to the `yield_now` call in our async function.
 
+#### a little bit of unsafe
+
 Unfortunately we come up against the borrow checker again.
 
 We can't just take our `MutexGuard` and store it next to the `Mutex` it's guarding.
@@ -984,13 +1014,13 @@ In fact it's so against those that we have to use `unsafe` to do what we want.
 
 (admittedly, what we're trying to do is wrong from the start)
 
-(so this isn't that surprising)
+(so it's not that surprising)
 
 What we're going to do is create a `MutexGuard` with a `'static` lifetime.
 
 That means, we're telling the borrow checker that it will last as long as it needs to.
 
-In this case, this is legitimately OK.
+In our case, this is legitimately OK.
 
 This is why we keep the Arc stored even though we don't need it.
 
@@ -1014,13 +1044,15 @@ But keep in mind that Rust wants to protect us here.
 
 And we are very carefully going around that protection.
 
-(here be dragons, etc.)
+(here be dragons, don't do this at home, etc.)
+
+#### holding onto that guard
 
 Once we have our `MutexGuard`, we print the value.
 
 We're now going to yield back to the runtime.
 
-So just like in our `YieldNow` future, we need to wake our waker first.
+So just like in our `YieldNow` future, we need to [wake our waker](@/posts/understanding-async-await-2.md#the-waker) first.
 
 Otherwise our future will never be polled again.
 
@@ -1038,7 +1070,9 @@ Then move to state `Done` and return `Poll::Ready`.
 
 At that point, the `MutexGuard` will get dropped.
 
-The important bit here is that we hold on to the `MutexGuard` **and return**.
+That's the end of the implementation.
+
+The important bit here is that in the `Yielded` state, we hold on to the `MutexGuard` **and return**.
 
 This is what our async function is doing too.
 
@@ -1047,6 +1081,8 @@ But we don't see it so clearly.
 We just see `.await`.
 
 But every time your async function contains an await point, that is the future returning.
+
+(potentially)
 
 And before returning, it has to store all the in-scope local variables in itself.
 
@@ -1061,6 +1097,8 @@ We're going to spawn the same async function to help provoke the hang as we did 
 That's `yieldless_mutex_access` as described in [back to trying to break things](#back-to-trying-to-break-things).
 
 (the one that doesn't actually do anything async)
+
+(we're mixes paradigms a bit, but implementing this future isn't interesting)
 
 And we'll [unwrap async main()](@/posts/understanding-async-await-2.md#unwrapping-async-main) straight away.
 
@@ -1087,8 +1125,6 @@ fn main() {
 }
 ```
 
-There is one important thing to note here.
-
 We're creating a current-thread runtime.
 
 Same as before.
@@ -1105,7 +1141,7 @@ Because that's going to help us see what's happening.
 
 The important point is the two futures.
 
-`YieldlessMutexGuard` gets spawned first.
+`yieldless_mutex_access()` gets spawned first.
 
 Then `HoldMutexGuard` gets awaited.
 
@@ -1113,7 +1149,7 @@ As we saw when we introduced [spawn](#aside-spawn), the new task has to wait.
 
 The runtime is single threaded.
 
-So the new task created with `YieldlessMutexGuard` must wait until the current task yields to the runtime.
+So the new task created with `yieldless_mutex_access()` must wait until the current task yields to the runtime.
 
 This means that the `HoldMutexGuard` future is run first.
 
@@ -1125,11 +1161,13 @@ It wakes it's waker.
 
 Then changes state to `Yielded`, storing the `MutexGuard` in itself.
 
-And then returns `Poll::Pending`, yielding to the runtime.
+And then returns `Poll::Pending`.
+
+Yielding to the runtime.
 
 Now the runtime can poll the next task.
 
-The one spawned with `YieldlessMutexGuard`.
+The one spawned with `yieldless_mutex_access()`.
 
 This task locks the mutex.
 
@@ -1171,7 +1209,7 @@ And communicate with that task via [message passing](https://docs.rs/tokio/lates
 
 This is a topic for a whole other blog post though.
 
-So we won't go into it today.
+So we won't go into it here.
 
 In part 4, we will look at message passing and channels.
 
@@ -1181,6 +1219,6 @@ See you next time!
 
 ### thanks
 
-A huge thank-you to [Conrad Ludgate](https://github.com/conradludgate) and [Predrag Gruevski](get a link and check name) for help in writing the manual future. This post would have been cut short without that.
+A huge thank-you to [Conrad Ludgate](https://github.com/conradludgate) and [Predrag Gruevski](https://predr.ag/) for help in writing the manual future (especially that `MutexGuard` transmute). This post would have been cut short without that.
 
 (in alphabetical order)
