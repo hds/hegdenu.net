@@ -55,9 +55,173 @@ Not necessarily doing it right.
 
 ### aside: mutexes and mutex guards in rust
 
-TODO: explain how mutex guards work in rust
+We're going to be talking about mutexes a lot.
 
-Link [`std::sync::Mutex`](https://doc.rust-lang.org/std/sync/struct.Mutex.html).
+So it's probably worth going over the basics quickly.
+
+To make sure we're on the same page.
+
+Mutex is short for "Mutual Exclusion".
+
+It's a concurrent programming primitive.
+
+It ensures that only one part of the program is doing some specific thing at a given time.
+
+Usually this is accessing some object which is shared across threads.
+
+(if you don't have multiple threads, then you don't need this sort of protection)
+
+A traditional mutex has two methods.
+
+(traditional here means different to Rust)
+
+Lock.
+
+Unlock.
+
+The code locks the mutex, does something, then unlocks the mutex.
+
+If some other part of the program already holds the mutex, then your code blocks on the lock method.
+
+We could imagine this flow in Rust by inventing our own types.
+
+```rust
+// These are NOT real Rust types, especially `MyMutex`
+fn exclusive_access(mutex: &MyMutex, protected: &MyObject) {
+    // Blocks until a lock can be obtained
+    mutex.lock();
+
+    // This "something" is what is protected by the mutex.
+    protected.do_something();
+
+    // Once unlocked, other threads can lock the mutex. Don't forget this bit!
+    mutex.unlock();
+}
+```
+
+The problem here is that `MyObject` is only protected by convention.
+
+We have to trust that everywhere that `MyObject` is accessed, the same mutex is locked.
+
+(if you lock a different mutex it really doesn't help at all)
+
+And you might forgot to unlock the mutex when you're finished.
+
+That doesn't seem likely in this toy example.
+
+But imagine that we use the `?` operator to return early from `do_something()` if it returns an error.
+
+Oops!
+
+Now we can't ever lock the mutex again.
+
+#### how rust does mutexes
+
+Instead, Rust sticks the mutex and the object it protects together.
+
+This is [`std::sync::Mutex`](https://doc.rust-lang.org/std/sync/struct.Mutex.html).
+
+The protected object is effectively inside the mutex.
+
+When you lock the mutex you get a `MutexGuard`.
+
+(now we're getting to the mutex guard)
+
+And you can access your protected object through the guard by dereferencing it.
+
+When the guard goes out of scope, the mutex is unlocked automatically.
+
+This behaviour is called RAII.
+
+Which stands for "Resource Acquisition Is Initialization".
+
+For our purposes, it means that we can only get a `MutexGuard` if we can acquire a lock.
+
+(the guard is the resource or 'R' in RAII)
+
+And that the lock is tied to the lifetime of the guard returned.
+
+Once the guard gets dropped, the lock is released.
+
+And therefore, as long as the object is not leaked, the mutex will never stay locked forever.
+
+Wow, that was a lot to take in.
+
+Let's look at our previous example oxidised.
+
+(oxidised as in TODO)
+
+```rust
+// This is now the std library mutex
+fn exclusive_access(mutex: &std::sync::Mutex<MyObject>) {
+    // Blocks until a lock can be obtained (same as before)
+    let guard = mutex
+        .lock()
+        .expect("the mutex is poisoned, program cannot continue");
+
+    // The guard gets automatically dereferenced so we can call
+    // `MyObject`'s methods on it directly.
+    guard.do_something();
+
+    // That's it, once the guard goes out of scope, the lock is released.
+}
+```
+
+See how we can't accidentally access `MyObject` without locking the mutex.
+
+The type system makes it impossible.
+
+(there are no methods on `std::sync::Mutex` which give access)
+
+And we can't accidentally forget to unlock the mutex either.
+
+Once the guard is dropped, the mutex gets unlocked.
+
+And the guard always gets dropped.
+
+Except...
+
+(there is always an except...)
+
+If the thread holding the mutex guard panics.
+
+Then the guard doesn't get dropped.
+
+In Rust, this causes the Mutex to become poisoned.
+
+(you might have seen that mentioned in the code above)
+
+We won't go further into mutex poisoning.
+
+But if you're interested, check the [Mutex documentation](https://doc.rust-lang.org/std/sync/struct.Mutex.html#poisoning).
+
+#### mutex sequence diagram
+
+Let's try to visualise two threads accessing our protected object.
+
+I've simplified some things.
+
+For example, we can't actually just pass a mutex when spawning 2 threads.
+
+But we'll see how to do that later.
+
+And it's not important for the purpose of this example.
+
+![Sequence diagram showing two threads accessing the mutex protected `MyObject`.](/img/understanding-async-await-3/mutex-sequence_diagram.svg)
+
+Here we can see how two threads try to lock the mutex.
+
+Only Thread 1 succeeds.
+
+So Thread 2 is parked.
+
+(it stops executing)
+
+Once Thread 1 drops the mutex guard, the mutex is unlocked.
+
+Then Thread 2 can obtain the lock and do its work.
+
+Now, let's get back to doing the wrong thing with that `MutexGuard` in an async context.
 
 ### hold-mutex-guard async function
 

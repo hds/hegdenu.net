@@ -1,0 +1,50 @@
+shape: sequence_diagram
+
+main: main()
+thread1: Thread 1
+thread2: Thread 2
+mutex: Mutex
+guard: MutexGuard
+obj: MyObject
+
+main -> obj: new()
+main <- obj: MyObject {
+  style.stroke-dash: 5
+}
+main -> mutex: new(my_object)
+main <- mutex: Mutex {
+  style.stroke-dash: 5
+}
+
+main -> thread1.fn: spawn(|| exclusive_access(mutex))
+main -> thread2.fn: spawn(|| exclusive_access(mutex))
+
+thread1.fn -> mutex.lock1: lock()
+mutex.lock1 -> guard.locked1: new()
+mutex.lock1 <- guard.locked1: MutexGuard {
+  style.stroke-dash: 5
+}
+thread1.fn <- mutex.lock1: MutexGuard {
+  style.stroke-dash: 5
+}
+
+thread2.fn -> mutex.lock1.no: lock()
+
+thread1.fn -> guard.locked1: deref
+thread1.fn <- guard.locked1: &MyObject
+thread1.fn -> obj: do_something()
+thread1.fn -> guard.locked1: drop()
+guard.locked1 -> mutex.lock1: unlock()
+
+mutex.lock2 -> guard.locked2: new()
+mutex.lock2 <- guard.locked2: MutexGuard {
+  style.stroke-dash: 5
+}
+thread2.fn2 <- mutex.lock2: MutexGuard {
+  style.stroke-dash: 5
+}
+thread2.fn2 -> guard.locked2: deref
+thread2.fn2 <- guard.locked2: &MyObject
+thread2.fn2 -> obj: do_something()
+thread2.fn2 -> guard.locked2: drop()
+guard.locked2 -> mutex.lock2: unlock()
