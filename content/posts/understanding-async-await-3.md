@@ -178,17 +178,13 @@ And we can't accidentally forget to unlock the mutex either.
 
 Once the guard is dropped, the mutex gets unlocked.
 
-And the guard always gets dropped.
-
 Except...
 
 (there is always an except...)
 
 If the thread holding the mutex guard panics.
 
-Then the guard doesn't get dropped.
-
-In Rust, this causes the Mutex to become poisoned.
+Then, when the guard is being dropped (since panics don't prevent drops), the Mutex, rather than unlocked, is _poisoned_.
 
 (you might have seen that mentioned in the code above)
 
