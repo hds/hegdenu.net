@@ -184,7 +184,11 @@ Except...
 
 If the thread holding the mutex guard panics.
 
-Then, when the guard is being dropped (since panics don't prevent drops), the Mutex, rather than unlocked, is _poisoned_.
+Then, when the guard is being dropped.
+
+(since panics don't prevent drops)
+
+Rather than Mutex being unlocked, is _poisoned_.
 
 (you might have seen that mentioned in the code above)
 
@@ -1231,6 +1235,8 @@ See you next time!
 
 A huge thank-you to [Conrad Ludgate](https://github.com/conradludgate) and [Predrag Gruevski](https://predr.ag/) for help in writing the manual future (especially that `MutexGuard` transmute). This post would have been cut short without that.
 
+Twelve points go [Daniel "Yandros" Henry-Mantilla](https://github.com/danielhenrymantilla) for pointing out that `drop()` **does** get called during a panic. This is detected by the `MutexGuard` and used to poison the Mutex. This was submitted as the first ever [PR](https://github.com/hds/hegdenu.net/pull/1) on my [web-site repo](https://github.com/hds/hegdenu.net)!
+
 Thanks to [sak96](https://sak96.github.io/) for reminding me that there is a lint for holding a guard across an await point.
 
-(in alphabetical order)
+(in alphabetical order - sort of)
