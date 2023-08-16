@@ -7,7 +7,9 @@ I'm a software engineering manager (and amateur number theorist) living and work
 
 ### Contact
 
-If you'd like to contact me, you can send an email to &lsquo;hds&rsquo; at this domain. You can also use the same username at caffeineconcepts.com, which is my primary address.
+If you'd like to contact me, you can send an email to [hds@hegdenu.net](mailto:hds@hegdenu.net). You can also use the same username at caffeineconcepts.com, which is my primary address.
+
+You can also find me as `haydenstainsby` on Discord. I'm generally pretty active on the public [Tokio](https://tokio.rs/) server: [invite link](https://discord.gg/tokio).
 
 ### Social networks
 
