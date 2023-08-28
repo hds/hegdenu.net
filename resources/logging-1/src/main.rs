@@ -1,6 +1,6 @@
 use tracing::Subscriber;
 use tracing::{error, info};
-use tracing_subscriber::{prelude::*, Layer};
+use tracing_subscriber::Layer;
 
 struct HtmlFormatterLayer;
 
@@ -20,5 +20,5 @@ fn main() {
     let mog = Mog { val: 42 };
     error!(?mog, "Some error with mog.");
 
-    info!("Hello, world!");
+    info!("Hello, world: {}!", mog.val);
 }
