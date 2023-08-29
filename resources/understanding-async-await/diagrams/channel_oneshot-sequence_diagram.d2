@@ -1,0 +1,9 @@
+shape: sequence_diagram
+
+prod: Producer
+chan: Channel (oneshot)
+cons: Consumer
+
+prod -> chan: msg = A
+chan -> cons: msg = A
+cons."received: A"

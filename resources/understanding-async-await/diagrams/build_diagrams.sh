@@ -26,3 +26,12 @@ for d2 in $(ls hold_mutex_guard-*.d2 spawn_*.d2 mutex-*.d2); do
         "$d2" \
         "../../../static/img/understanding-async-await-3/${d2%.*}.svg"
 done
+
+for d2 in $(ls channel_*.d2 ); do
+    d2 \
+        --layout=elk \
+        --theme=200 \
+        --pad=30 \
+        "$d2" \
+        "../../../static/img/understanding-async-await-4/${d2%.*}.svg"
+done

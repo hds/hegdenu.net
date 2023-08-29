@@ -1,0 +1,19 @@
+shape: sequence_diagram
+
+prod: Producer
+chan: Channel (broadcast)
+cons1: Consumer 1
+cons2: Consumer 2
+
+prod -> chan: msg = A
+prod -> chan: msg = B
+
+chan -> cons1: msg = A
+cons1."received: A"
+chan -> cons2: msg = A
+cons2."received: A"
+
+chan -> cons1: msg = B
+cons1."received: A, B"
+chan -> cons2: msg = B
+cons2."received: A, B"

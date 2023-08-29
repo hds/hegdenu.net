@@ -1,0 +1,16 @@
+shape: sequence_diagram
+
+prod1: Producer 1
+prod2: Producer 2
+chan: Channel (mpsc)
+cons: Consumer
+
+prod1 -> chan: msg = A
+prod2 -> chan: msg = B
+prod1 -> chan: msg = C
+chan -> cons: msg = A
+cons."received: A"
+chan -> cons: msg = B
+cons."received: A, B"
+chan -> cons: msg = C
+cons."received: A, B, C"
