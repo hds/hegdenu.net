@@ -1,0 +1,61 @@
+shape: sequence_diagram
+
+prod1: Producer (task)
+tx: Sender
+send: Send
+inner: Channel
+
+prod1 -> tx: send("A")
+prod1 <- tx: Send \{value: "A", inner: Channel \} {
+  style.stroke-dash: 5
+}
+
+channel has capacity: {
+  prod1 -> send: poll()
+  send -> inner: send("A")
+  send <- inner: Ok(()) {
+    style.stroke-dash: 5
+  }
+  prod1 <- send: Poll::Ready(Ok(())) {
+    style.stroke-dash: 5
+  }
+}
+
+channel is closed: {
+  prod1 -> send: poll()
+  send -> inner: send("A")
+  send <- inner: Err(ChannelSendError::Full) {
+    style.stroke-dash: 5
+  }
+  prod1 <- send: Poll::Ready(Err(ChannelClosedError)) {
+    style.stroke-dash: 5
+  }
+}
+
+channel is full: {
+  prod1 -> send: poll()
+
+  send -> inner: send("A")
+  send <- inner: Err(ChannelSendError::Full) {
+    style.stroke-dash: 5
+  }
+  send -> inner: register_sender_waker()
+  send <- inner: {
+    style.stroke-dash: 5
+  }
+  prod1 <- send: Poll::Pending {
+    style.stroke-dash: 5
+  }
+
+  inner."capacity becomes available\n(a receiver receives a value)"
+  inner -> prod1: wake()\n(cheating*)
+
+  prod1 -> send: poll()
+  send -> inner: send("A")
+  send <- inner: Ok(()) {
+    style.stroke-dash: 5
+  }
+  prod1 <- send: Poll::Ready(Ok(())) {
+    style.stroke-dash: 5
+  }
+}

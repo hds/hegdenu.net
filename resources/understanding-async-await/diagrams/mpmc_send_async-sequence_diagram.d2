@@ -1,0 +1,26 @@
+shape: sequence_diagram
+
+prod1: Producer (task)
+tx: Sender
+
+channel has capacity: {
+  prod1 -> tx: send("A").await
+  prod1 <- tx: Ok(()) {
+    style.stroke-dash: 5
+  }
+}
+
+channel is closed: {
+  prod1 -> tx: send("C").await
+  prod1 <- tx: Err(ChannelClosedError) {
+    style.stroke-dash: 5
+  }
+}
+
+channel is full: {
+  prod1 -> tx: send("B").await
+  tx."waits until capacity is available\n(async fn doesn't return)"
+  prod1 <- tx: Ok(()) {
+    style.stroke-dash: 5
+  }
+}

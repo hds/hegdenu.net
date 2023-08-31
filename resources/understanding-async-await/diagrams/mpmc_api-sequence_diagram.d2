@@ -1,0 +1,44 @@
+shape: sequence_diagram
+
+main: async main()
+prod1: Producer 1 (task)
+tx: Sender
+cons1: Consumer 1 (task)
+rx: Receiver
+
+main -> main: channel(1) -> (sender, receiver)
+
+main -> cons1: spawn(receive_loop(receiver)).await
+cons1 -> rx: recv().await
+rx."The channel is empty, waiting for a new message"
+
+main -> prod1: spawn(send_two(sender)).await
+prod1 -> tx: send("A").await
+prod1 <- tx: Ok(()) {
+  style.stroke-dash: 5
+}
+prod1 -> tx: send("B").await
+tx."The inner channel is full, waiting for capacity"
+
+cons1 <- rx: Ok("A")
+cons1."Received: A"
+
+tx."As a message has been received, there is now capacity"
+prod1 <- tx: Ok(()) {
+  style.stroke-dash: 5
+}
+main <- prod1: () {
+  style.stroke-dash: 5
+}
+
+cons1 -> rx: recv().await
+cons1 <- rx: Ok("B")
+cons1."Received: A, B"
+
+cons1 -> rx: recv().await
+cons1 <- rx: Err(ChannelClosedError)
+cons1."Received: A, B"
+
+main <- cons1: () {
+  style.stroke-dash: 5
+}
