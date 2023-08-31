@@ -5,12 +5,47 @@ use std::sync::{Arc, Mutex};
 use std::task::Waker;
 use std::{collections::VecDeque, task::Poll};
 
+/// Creates a new asynchronous bounded multi-producer multi-consumer channel,
+/// returning the sender/receiver halves.
+///
+/// The channel will buffer messages up to the defined capacity. Once the
+/// buffer is full, attempts to send new messages will wait until a message is
+/// received from the channel. When the channel is empty, attempts to receive
+/// new messages will wait until  a message is sent to the channel.
+///
+/// If all receivers or all senders have disconnected, the channel will be
+/// closed. Subsequent attempts to send a message will return a
+/// [`ChannelClosedError`]. Subsequent attempts to receive a message will drain
+/// the channel and once it is empty, will also return a [`ChannelClosedError`].
 pub fn channel(capacity: usize) -> (Sender, Receiver) {
     let inner = Arc::new(Mutex::new(Channel::new(capacity)));
 
     (Sender::new(inner.clone()), Receiver::new(inner))
 }
 
+/// Error returned when the underlying channel is closed.
+///
+/// This error will be returned from [`Sender::send`] or [`Receiver::recv`] if
+/// the channel is closed. In the case of `recv`, the channel must also be
+/// empty, otherwise the next value will be returned.
+#[derive(Debug)]
+pub struct ChannelClosedError {}
+impl fmt::Display for ChannelClosedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "channel closed")
+    }
+}
+impl Error for ChannelClosedError {}
+
+/// The sending-half of the [`mpmc::channel`] type.
+///
+/// Messages can be sent through the channel with [`send`].
+///
+/// This half can be cloned to send from multiple tasks. Dropping all senders
+/// will cause the channel to be closed.
+///
+/// [`mpmc::channel`]: fn@super::mpmc::channel
+/// [`send`]: fn@Self::send
 pub struct Sender {
     inner: Arc<Mutex<Channel>>,
 }
@@ -26,6 +61,13 @@ impl Sender {
         Self { inner }
     }
 
+    /// Sends a value, waiting until there is capacity.
+    ///
+    /// A successful send occurs when there is at least one [`Receiver`] still
+    /// connected to the channel. An `Err` result means that the value will
+    /// never be received, however an `Ok` result doesn't guarantee that the
+    /// value will be received as all receivers may disconnect immediately
+    /// after this method returns `Ok`.
     pub async fn send(&self, value: String) -> Result<(), ChannelClosedError> {
         Send {
             value,
@@ -74,6 +116,16 @@ impl Future for Send {
     }
 }
 
+/// The receiving-half of the [`mpmc::channel`] type.
+///
+/// Messages can be received from the channel with [`recv`].
+///
+/// This half can be cloned to receive from multiple tasks. Each message will
+/// only be received by a single receiver. Dropping all receivers will cause
+/// the channel to be closed.
+///
+/// [`mpmc::channel`]: fn@super::mpmc::channel
+/// [`recv`]: fn@Self::recv
 pub struct Receiver {
     inner: Arc<Mutex<Channel>>,
 }
@@ -89,6 +141,12 @@ impl Receiver {
         Self { inner }
     }
 
+    /// Receives a value, waiting until one is available.
+    ///
+    /// Once the channel is closed (by dropping all senders), this method will
+    /// continue to return the remaining values stored in the channel buffer.
+    /// Once the channel is empty, this method will return
+    /// [`ChannelClosedError`].
     pub async fn recv(&self) -> Result<String, ChannelClosedError> {
         Recv {
             inner: self.inner.clone(),
@@ -135,25 +193,26 @@ impl Future for Recv {
     }
 }
 
-#[derive(Debug)]
-pub struct ChannelClosedError {}
-impl fmt::Display for ChannelClosedError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "channel closed")
-    }
-}
-impl Error for ChannelClosedError {}
-
-#[derive(Clone)]
+/// The inner mpmc channel implementation.
+///
+/// This is a sync object. All methods return immediately.
 struct Channel {
+    /// The message buffer
     buffer: VecDeque<String>,
+    /// The capacity of the channel, this many messages can be buffered before
+    /// sending will error.
     capacity: usize,
+    /// Indicates when the channel has been closed.
     closed: bool,
 
+    /// The number of connected `Sender`s.
     senders: usize,
+    /// The number of active `Receiver`s.
     receivers: usize,
 
+    /// A queue of wakers for senders awaiting free capacity in the channel.
     sender_wakers: VecDeque<Waker>,
+    /// A queue of wakers for receivers awaiting a new message in the channel.
     receiver_wakers: VecDeque<Waker>,
 }
 
