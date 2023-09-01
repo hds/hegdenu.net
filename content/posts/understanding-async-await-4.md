@@ -745,6 +745,10 @@ We're diving through the async/await syntax and into future land.
 
 ![Sequence diagram of the use of the future Send. It covers three use cases: channel has capacity, channel is closed, and channel is full.](/img/understanding-async-await-4/mpmc_send_future-sequence_diagram.svg)
 
+The creation of the `Send` future is outside of the states.
+
+This is because it is always the same.
+
 As you can see, we've already created part of the API for our inner channel.
 
 This is based purely on what we know we need.
@@ -850,4 +854,217 @@ Later we'll go over the implementation of the inner channel.
 
 (that's mostly for completeness sake)
 
-(and also because we want to cover actually using that registered waker)
+(and also because we want to cover actually using the waker that we "registered")
+
+### recv future
+
+We've already shown the implementation for our async send function.
+
+Now let's look at the async function `Receiver::recv()`.
+
+As you can probably imagine, this function is analogous to `Sender::send()` in many ways.
+
+We'll cover the receive function in a similar amount of detail though.
+
+Just to make sure that it is understandable.
+
+First let's look at the sequence diagram up to the async function.
+
+![Sequence diagram of the use of the async function Receiver::recv. It covers three use cases: channel has messages, channel is closed and empty, and channel is empty (not closed).](/img/understanding-async-await-4/mpmc_recv_async-sequence_diagram.svg)
+
+Just like the send one, this diagram is on an async/await level.
+
+We also have three states.
+
+But they are ever so slightly different.
+
+**State: channel has messages.**
+
+In this case, the recv async function returns `Ok(msg)`.
+
+Here `msg` is the first message in the channel.
+
+It does this async-immediately.
+
+(that's returning immediately in an async sense, but really could be doing anything in the meantime)
+
+**State: channel is closed and empty.**
+
+This state is similar to the closed channel state for the send function.
+
+But with an additional condition.
+
+The channel is closed **and** there are no more messages.
+
+If there are remaining messages in the channel, the receivers will still get them.
+
+Even if the channel is closed.
+
+However, if the channel is closed and empty, and error is returned.
+
+This is the same error that the sender receives if the channel is closed.
+
+
+**State: channel is empty (not closed).**
+
+For receiving, the "interesting" state is when the channel is empty.
+
+So no message can be received.
+
+The async function will wait.
+
+It won't return.
+
+(again, we can smell a `Poll::Pending` around here somewhere)
+
+(but we can't see it yet)
+
+At some point, a new message will be sent to the channel.
+
+Then our async function will return `Ok(msg)`.
+
+The same as in state "channel has messages".
+
+Now it's time to implement.
+
+Here's the async function `Receiver::recv()`.
+
+```rust
+pub async fn recv(&self) -> Result<String, ChannelClosedError> {
+    Recv {
+        inner: self.inner.clone(),
+    }
+    .await
+}
+```
+
+We see that we need a new future.
+
+Clearly we'll call it `Recv`.
+
+Note that `Receiver::recv` doesn't take any arguments.
+
+(just `&self`, a reference to itself)
+
+So the `Recv` future only needs the reference to the internal channel.
+
+For completeness, here's the structure definition.
+
+```rust
+pub struct Receiver {
+    inner: Arc<Mutex<Channel>>,
+}
+```
+
+When we implemented `Future` for `Send` we didn't hold any state.
+
+We made use of the state of the inner channel.
+
+As we implement `Future` for `Recv` we will do the same.
+
+But before we write any code, let's understand what we require.
+
+Here's the sequence diagram showing the different states we have to consider.
+
+(after pulling back the curtains to see the future underneath)
+
+(this is another good band name)
+
+(or a Culture ship name)
+
+The same as the `Send` diagram, the creation of `Recv` happens outside of the state options.
+
+As it is always the same.
+
+![Sequence diagram of the use of the future Recv. It covers three use cases: channel has messages, channel is closed and empty, and channel is empty (not closed).](/img/understanding-async-await-4/mpmc_recv_future-sequence_diagram.svg)
+
+We've further extended the necessary inner channel API.
+
+We also need a `Channel::recv` function.
+
+Just like `Channel::send` it can return 3 values.
+
+If there is a message to receive, it returns `Ok(msg)`.
+
+And our future can return `Poll::Ready` of the same.
+
+If the channel is closed and empty, it returns `Err(ChannelRecvError::Closed)`.
+
+Then our future can also return `Poll::Ready` straight away, but this time with the closed error.
+
+(that's `Err(ChannelClosedError)`, same as for sending)
+
+The interesting state is now when the channel is empty.
+
+(empty but not closed of course)
+
+Then we return `Poll::Pending`.
+
+But first we need to register our waker.
+
+A receiver waker needs to be woken on a different condition than a sender waker.
+
+So we need a different API to register it.
+
+(but we already gave this away when we called the other method `Channel::register_sender_waker()`)
+
+That's why we need `Channel::register_receiver_waker()`.
+
+We will expect a receiver waker to be woken when a new message enters the channel.
+
+In this sequence diagram, we show the inner channel waking the consumer task.
+
+But we know this goes through the runtime.
+
+Even though we know everything already, let's look at the `Future` implementation.
+
+```rust
+impl Future for Recv {
+    type Output = Result<String, ChannelClosedError>;
+
+    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        let Ok(mut guard) = self.inner.lock() else {
+            panic!("MPMC Channel has become corrupted.");
+        };
+
+        match guard.recv() {
+            Ok(value) => Poll::Ready(Ok(value)),
+            Err(ChannelRecvError::Closed) => Poll::Ready(Err(ChannelClosedError {})),
+            Err(ChannelRecvError::Empty) => {
+                guard.register_receiver_waker(cx.waker().clone());
+                Poll::Pending
+            }
+        }
+    }
+}
+```
+
+As with `Send`, the `Output` is the same as the return type of `Receiver::recv`.
+
+We lock the mutex around the inner channel.
+
+(and perform the same check for a poisoned mutex)
+
+(our thread is like a food taster)
+
+(if the mutex is poisoned, it dies to warn everyone else)
+
+(except this may cause the whole program crash)
+
+(which is like everyone dying)
+
+Then we call `Channel::recv`.
+
+We've gone through the three options already.
+
+So we won't repeat ourselves.
+
+That's it.
+
+We've just written the second and final future we need for our async mpmc channel!
+
+Of course, we would like to look at the inner channel in a bit more detail.
+
+So let's do that now!
+
+

@@ -1,0 +1,61 @@
+shape: sequence_diagram
+
+cons1: Consumer (task)
+rx: Receiver
+recv: Recv
+inner: Channel
+
+cons1 -> rx: recv()
+cons1 <- rx: Recv \{ inner: Channel \} {
+  style.stroke-dash: 5
+}
+
+channel has messages: {
+  cons1 -> recv: poll()
+  recv -> inner: recv()
+  recv <- inner: Ok(msg) {
+    style.stroke-dash: 5
+  }
+  cons1 <- recv: Poll::Ready(Ok(msg)) {
+    style.stroke-dash: 5
+  }
+}
+
+channel is closed and empty: {
+  cons1 -> recv: poll()
+  recv -> inner: recv()
+  recv <- inner: Err(ChannelRecvError::Closed) {
+    style.stroke-dash: 5
+  }
+  cons1 <- recv: Poll::Ready(Err(ChannelClosedError)) {
+    style.stroke-dash: 5
+  }
+}
+
+channel is empty (not closed): {
+  cons1 -> recv: poll()
+
+  recv -> inner: recv()
+  recv <- inner: Err(ChannelRecvError::Empty) {
+    style.stroke-dash: 5
+  }
+  recv -> inner: register_receiver_waker()
+  recv <- inner: {
+    style.stroke-dash: 5
+  }
+  cons1 <- recv: Poll::Pending {
+    style.stroke-dash: 5
+  }
+
+  inner."message becomes available\n(a sender sends a value)"
+  inner -> cons1: wake()\n(cheating*)
+
+  cons1 -> recv: poll()
+  recv -> inner: recv()
+  recv <- inner: Ok(msg) {
+    style.stroke-dash: 5
+  }
+  cons1 <- recv: Poll::Ready(Ok(msg)) {
+    style.stroke-dash: 5
+  }
+}

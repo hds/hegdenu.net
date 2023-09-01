@@ -6,7 +6,7 @@ send: Send
 inner: Channel
 
 prod1 -> tx: send("A")
-prod1 <- tx: Send \{value: "A", inner: Channel \} {
+prod1 <- tx: Send \{ value: "A", inner: Channel \} {
   style.stroke-dash: 5
 }
 
@@ -24,7 +24,7 @@ channel has capacity: {
 channel is closed: {
   prod1 -> send: poll()
   send -> inner: send("A")
-  send <- inner: Err(ChannelSendError::Full) {
+  send <- inner: Err(ChannelSendError::Closed) {
     style.stroke-dash: 5
   }
   prod1 <- send: Poll::Ready(Err(ChannelClosedError)) {

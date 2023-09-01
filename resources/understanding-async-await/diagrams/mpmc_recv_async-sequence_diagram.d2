@@ -1,0 +1,26 @@
+shape: sequence_diagram
+
+cons1: Consumer (task)
+rx: Receiver
+
+channel has messages: {
+  cons1 -> rx: recv().await
+  cons1 <- rx: Ok(msg) {
+    style.stroke-dash: 5
+  }
+}
+
+channel is closed and empty: {
+  cons1 -> rx: recv().await
+  cons1 <- rx: Err(ChannelClosedError) {
+    style.stroke-dash: 5
+  }
+}
+
+channel is empty (not closed): {
+  cons1 -> rx: recv().await
+  rx."waits until a message is available\n(async fn doesn't return)"
+  cons1 <- rx: Ok(msg) {
+    style.stroke-dash: 5
+  }
+}
