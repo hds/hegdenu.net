@@ -1571,3 +1571,60 @@ And the channel closing isn't dependent on the number of futures that may refere
 
 We break the loop and everything can be freed.
 
+As mentioned above, the receiver implementation is practically identical.
+
+So we won't cover it here.
+
+## the end
+
+That's the end of our async multi-producer multi-consumer channel implementation.
+
+It's also the end of this series of blog posts.
+
+The one on "How I finally understood async/await in Rust".
+
+(you know you're reading a series, right?)
+
+(no?)
+
+(lucky you, you can start from [the beginning](@/posts/understanding-async-await-4.md))
+
+During this series, we asked four questions.
+
+Here is the abridged version.
+
+(spoiler alert!)
+
+[Why doesn’t my task do anything if I don’t await it?](@/posts/understanding-async-await-1.md)
+
+(because it returns a state machine in its initial state)
+
+[How does a pending future get woken?](@/posts/understanding-async-await-2.md)
+
+(there's a thing called a waker that wakes the owning task)
+
+[Why shouldn’t I hold a mutex guard across an await point?](@/posts/understanding-async-await-3.md)
+
+(because we're actually returning from a function at every await point)
+
+[Why would I ever want to write a future manually?](#why-would-i-ever-want-to-write-a-future-manually)
+
+(because without async primitives written as "manual futures" you can't actually do anything async)
+
+Of course the real reason for the last question was so I had an excuse to write one.
+
+Now I've got this series out of the way.
+
+(and the desire to write a series of blog posts out of my system)
+
+I plan to go back to writing smaller posts on whatever I happen to be doing at the time.
+
+## thanks
+
+Thanks to everyone for reading!
+
+A huge thank-you to the people who wrote to me to say how much they were enjoying and/or learning from the series.
+
+That was very motivating and always made my day.
+
+(let's be honest, it made my week, perhaps even the month)
