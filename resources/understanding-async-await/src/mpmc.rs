@@ -54,7 +54,7 @@ impl Sender {
     fn new(inner: Arc<Mutex<Channel>>) -> Self {
         {
             match inner.lock() {
-                Ok(mut guard) => guard.senders += 1,
+                Ok(mut guard) => guard.inc_senders(),
                 Err(_) => panic!("MPMC Channel has become corrupted."),
             }
         }
@@ -134,7 +134,7 @@ impl Receiver {
     fn new(inner: Arc<Mutex<Channel>>) -> Self {
         {
             match inner.lock() {
-                Ok(mut guard) => guard.receivers += 1,
+                Ok(mut guard) => guard.inc_receivers(),
                 Err(_) => panic!("MPMC Channel has become corrupted."),
             }
         }
@@ -231,28 +231,39 @@ impl Channel {
         }
     }
 
+    /// Sends a message across the channel.
+    ///
+    /// If the message can be sent, the next receiver waker in the queue (if
+    /// any) will be woken as there is now an additional message which can be
+    /// received.
+    ///
+    /// An error will be returned if the channel is full or closed.
     fn send(&mut self, value: String) -> Result<(), ChannelSendError> {
         if self.closed {
             return Err(ChannelSendError::Closed);
         }
 
         if self.buffer.len() < self.capacity {
-            self.buffer.push_front(value);
-            if let Some(waker) = self.receiver_wakers.pop_back() {
-                waker.wake();
-            }
+            self.buffer.push_back(value);
+            self.wake_next_receiver();
             Ok(())
         } else {
             Err(ChannelSendError::Full)
         }
     }
 
+    /// Receives a message from the channel.
+    ///
+    /// If a message can be received, then the next sender waker in the queue
+    /// (if any) will be woken as there is now additional free capacity to send
+    /// another message.
+    ///
+    /// An error will be returned if the channel is empty. The error will
+    /// depend on whether the channel is also closed.
     fn recv(&mut self) -> Result<String, ChannelRecvError> {
-        match self.buffer.pop_back() {
+        match self.buffer.pop_front() {
             Some(value) => {
-                if let Some(waker) = self.sender_wakers.pop_back() {
-                    waker.wake();
-                }
+                self.wake_next_sender();
                 Ok(value)
             }
             None => {
@@ -265,25 +276,80 @@ impl Channel {
         }
     }
 
+    /// Registers a waker to be woken when capacity is available.
+    ///
+    /// Senders are woken in FIFO order.
     fn register_sender_waker(&mut self, waker: Waker) {
-        self.sender_wakers.push_front(waker);
+        self.sender_wakers.push_back(waker);
     }
 
+    /// Registers a waker to be woken when a message is available.
+    ///
+    /// Receivers are woken in FIFO order.
     fn register_receiver_waker(&mut self, waker: Waker) {
-        self.receiver_wakers.push_front(waker);
+        self.receiver_wakers.push_back(waker);
     }
 
-    fn dec_senders(&mut self) {
-        self.senders -= 1;
-        if self.senders == 0 {
-            self.closed = true;
+    /// Wakes the sender at the front of the queue.
+    ///
+    /// If no sender wakers are registered, this method does nothing.
+    fn wake_next_sender(&mut self) {
+        if let Some(waker) = self.sender_wakers.pop_front() {
+            waker.wake();
         }
     }
 
+    /// Wakes the receiver at the front of the queue.
+    ///
+    /// If no receiver wakers are registered, this method does nothing.
+    fn wake_next_receiver(&mut self) {
+        if let Some(waker) = self.receiver_wakers.pop_front() {
+            waker.wake();
+        }
+    }
+
+    /// Increment the sender count.
+    fn inc_senders(&mut self) {
+        self.senders += 1;
+    }
+
+    /// Decrement the sender count.
+    ///
+    /// If the count reaches zero, close the channel.
+    fn dec_senders(&mut self) {
+        self.senders -= 1;
+        if self.senders == 0 {
+            self.close();
+        }
+    }
+
+    /// Increment the receiver count.
+    fn inc_receivers(&mut self) {
+        self.receivers += 1;
+    }
+
+    /// Decrement the receiver count.
+    ///
+    /// If the count reaches zero, close the channel.
     fn dec_receivers(&mut self) {
         self.receivers -= 1;
         if self.receivers == 0 {
-            self.closed = true;
+            self.close();
+        }
+    }
+
+    /// Close the channel.
+    ///
+    /// All sender and receiver wakers which have been registered, but not yet
+    /// woken will get woken now.
+    fn close(&mut self) {
+        self.closed = true;
+
+        while let Some(waker) = self.sender_wakers.pop_front() {
+            waker.wake();
+        }
+        while let Some(waker) = self.receiver_wakers.pop_front() {
+            waker.wake();
         }
     }
 }

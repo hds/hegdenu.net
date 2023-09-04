@@ -1,0 +1,74 @@
+shape: sequence_diagram
+
+main: main (task)
+channel: channel()
+prod1: Producer 1 (task)
+tx1: Sender 1
+tx2: Sender 2
+inner: Channel
+
+Initial channel creation: {
+  main -> channel: channel(1) -> (sender, receiver)
+
+  channel -> inner: Channel::new()
+  channel <- inner: inner {
+    style.stroke-dash: 5
+  }
+
+  channel -> tx1: Sender::new(inner)
+  tx1 -> inner: inc_senders()
+  inner."senders: 0 -> 1"
+  tx1 <- inner: {
+    style.stroke-dash: 5
+  }
+  channel <- tx1: sender {
+    style.stroke-dash: 5
+  }
+
+  channel."Equivalent process to create Receiver"
+
+  main <- channel: (sender, receiver) {
+    style.stroke-dash: 5
+  }
+}
+
+Cloning the sender: {
+  main -> tx1: clone()
+  tx1 -> tx2: Sender::new(inner)
+  tx2 -> inner: inc_senders()
+  inner."senders: 1 -> 2"
+  tx2 <- inner: {
+    style.stroke-dash: 5
+  }
+  tx1 <- tx2: sender {
+    style.stroke-dash: 5
+  }
+  main <- tx1: new_sender {
+    style.stroke-dash: 5
+  }
+}
+
+Dropping a sender: {
+  main -> tx2: drop()
+  tx2 -> inner: decr_sender()
+  inner."senders: 2 -> 1"
+  tx2 <- inner: {
+    style.stroke-dash: 5
+  }
+  main <- tx2: {
+    style.stroke-dash: 5
+  }
+}
+
+Dropping the last sender: {
+  main -> tx1: drop()
+  tx1 -> inner: decr_sender()
+  inner."senders: 1 -> 0"
+  inner -> inner: close()
+  tx1 <- inner: {
+    style.stroke-dash: 5
+  }
+  main <- tx1: {
+    style.stroke-dash: 5
+  }
+}

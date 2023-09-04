@@ -1,0 +1,11 @@
+runtime: Async Runtime
+prod: Producer (task)
+send: Send (future)
+inner: Channel
+waker: Sender Waker
+
+runtime -> prod: keeps a list of still active tasks
+prod -> send: owns incomplete futures
+send -> inner: has a smart pointer reference to the inner channel
+inner -> waker: has a queue of sender wakers
+waker -> runtime: needs to inform runtime that the Producer task can proceed

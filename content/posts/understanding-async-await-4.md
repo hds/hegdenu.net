@@ -1067,4 +1067,507 @@ Of course, we would like to look at the inner channel in a bit more detail.
 
 So let's do that now!
 
+### inner channel implementation
+
+We've already defined four methods that our inner channel needs.
+
+(I keep calling it the inner channel, but there is no outer channel struct)
+
+(so the struct is just called `Channel`)
+
+```rust
+impl Channel {
+    fn send(&mut self, value: String) -> Result<(), ChannelSendError>
+    fn recv(&mut self) -> Result<String, ChannelRecvError>
+    fn register_sender_waker(&mut self, waker: Waker)
+    fn register_receiver_waker(&mut self, waker: Waker)
+}
+```
+
+First we have sync versions of `send()` and `recv()`.
+
+They each have their own error type.
+
+(we've seen them both already while implementing the `Send` and `Recv` futures)
+
+And two methods to register wakers.
+
+One for sender wakers.
+
+And one for receiver wakers.
+
+Now we have enough information to fill in the `Channel` struct.
+
+```rust
+/// The inner mpmc channel implementation.
+///
+/// This is a sync object. All methods return immediately.
+struct Channel {
+    /// The message buffer
+    buffer: VecDeque<String>,
+    /// The capacity of the channel, this many messages can be buffered before
+    /// sending will error.
+    capacity: usize,
+    /// Indicates when the channel has been closed.
+    closed: bool,
+
+    /// The number of connected `Sender`s.
+    senders: usize,
+    /// The number of active `Receiver`s.
+    receivers: usize,
+
+    /// A queue of wakers for senders awaiting free capacity in the channel.
+    sender_wakers: VecDeque<Waker>,
+    /// A queue of wakers for receivers awaiting a new message in the channel.
+    receiver_wakers: VecDeque<Waker>,
+}
+```
+
+I've included rustdoc comments explaining each field.
+
+But let's go through the groups.
+
+We use a [`VecDeque`](https://doc.rust-lang.org/stable/std/collections/struct.VecDeque.html) as the message buffer.
+
+We keep the total `capacity` of the channel separately.
+
+(we **could** use the capacity on the `VecDeque` for this, but that seems like it might go wrong)
+
+(basically because we don't control how that capacity value works)
+
+We also have a boolean to track when the channel is closed.
+
+The second group is a pair of counters.
+
+We keep track of the number of senders and receivers.
+
+(actually, we're going to expect the senders and receivers to keep track of themselves)
+
+(but the counters need to be on the channel)
+
+Then the last group are the queues of sender and receiver wakers.
+
+These will be used to wake a sender waiting for capacity.
+
+And wake a receiver waiting for a message.
+
+Let's go backwards in adding our implementations.
+
+The two register methods are easy.
+
+```rust
+impl Channel {
+    /// Registers a waker to be woken when capacity is available.
+    ///
+    /// Senders are woken in FIFO order.
+    fn register_sender_waker(&mut self, waker: Waker) {
+        self.sender_wakers.push_back(waker);
+    }
+
+    /// Registers a waker to be woken when a message is available.
+    ///
+    /// Receivers are woken in FIFO order.
+    fn register_receiver_waker(&mut self, waker: Waker) {
+        self.receiver_wakers.push_back(waker);
+    }}
+```
+
+Each method pushes the waker to the back of the queue.
+
+That's all we need right now.
+
+Now let's look at the implementation for the `Channel::send()` method.
+
+```rust
+impl Channel {
+    /// Sends a message across the channel.
+    ///
+    /// If the message can be sent, the next receiver waker in the queue (if
+    /// any) will be woken as there is now an additional message which can be
+    /// received.
+    ///
+    /// An error will be returned if the channel is full or closed.
+    fn send(&mut self, value: String) -> Result<(), ChannelSendError> {
+        if self.closed {
+            return Err(ChannelSendError::Closed);
+        }
+
+        if self.buffer.len() < self.capacity {
+            self.buffer.push_back(value);
+            self.wake_next_receiver();
+            Ok(())
+        } else {
+            Err(ChannelSendError::Full)
+        }
+    }
+}
+```
+
+We check check if the channel is closed.
+
+That would mean returning the `Closed` error.
+
+With that our of the way, we check if there is capacity.
+
+If there is, we push the value onto the back of the buffer.
+
+Then we wake the next receiver.
+
+(more on this in a moment)
+
+And return `OK(())` as we're finished.
+
+If there isn't capacity, we return the `Full` error.
+
+(now back to waking the next receiver)
+
+Here's the implementation.
+
+```rust
+impl Channel {
+    /// Wakes the receiver at the front of the queue.
+    ///
+    /// If no receiver wakers are registered, this method does nothing.
+    fn wake_next_receiver(&mut self) {
+        if let Some(waker) = self.receiver_wakers.pop_front() {
+            waker.wake();
+        }
+    }
+}
+```
+
+As you can see, we pop the next receiver waker.
+
+If there is one, we wake it.
+
+If there isn't one, we do nothing.
+
+There being no receiver waker is the most common case.
+
+(unless the channel is permanently full)
+
+(which is not an ideal situation, but could happen)
+
+However, we may as well try to pop the next value from the queue and use that to check if there is one.
+
+Note that all these methods are synchronous.
+
+And we assume that whoever is calling methods on `Channel` has locked its mutex.
+
+("whoever" being the `Sender`, `Receiver` or their futures `Send` and `Recv`)
+
+So we don't need to worry about access from multiple threads.
+
+(again, this is multi-threaded cheating, but it allows us to focus on the `Future` impl)
+
+The implementation for `Channel::recv` is similarly straight forward.
+
+```rust
+impl Channel {
+    /// Receives a message from the channel.
+    ///
+    /// If a message can be received, then the next sender waker in the queue
+    /// (if any) will be woken as there is now additional free capacity to send
+    /// another message.
+    ///
+    /// An error will be returned if the channel is empty. The error will
+    /// depend on whether the channel is also closed.
+    fn recv(&mut self) -> Result<String, ChannelRecvError> {
+        match self.buffer.pop_front() {
+            Some(value) => {
+                self.wake_next_sender();
+                Ok(value)
+            }
+            None => {
+                if !self.closed {
+                    Err(ChannelRecvError::Empty)
+                } else {
+                    Err(ChannelRecvError::Closed)
+                }
+            }
+        }
+    }
+}
+```
+
+Here we attempt to pop a result from the buffer.
+
+(we don't care if the channel is closed if there are still messages available)
+
+if there is a value, we wake the next sender.
+
+(there is now one additional capacity in the buffer)
+
+Then return the value.
+
+If there is no value, the buffer must be empty.
+
+If the channel isn't closed, then we return the `Empty` error.
+
+Otherwise, the channel is closed and we return the `Closed` error.
+
+The sender waking method is basically the same as the receiver one.
+
+```rust
+impl Channel {
+    /// Wakes the sender at the front of the queue.
+    ///
+    /// If no sender wakers are registered, this method does nothing.
+    fn wake_next_sender(&mut self) {
+        if let Some(waker) = self.sender_wakers.pop_front() {
+            waker.wake();
+        }
+    }
+}
+```
+
+That's the end of the implementation of the inner channel.
+
+(almost the end)
+
+(there's a little bit more)
+
+What we haven't seen is how we determine that the channel is closed.
+
+And together with that, how we determine when the channel should still be open.
+
+We already saw on the `Channel` struct that we have a counter for senders and receivers.
+
+Now we need to implement the incrementing and decrementing of those counters.
+
+### counting
+
+There are a few different places that the incrementing / decrementing logic could be placed.
+
+For this code, I placed the incrementing in the `new()` method.
+
+And the decrementing in the `Drop` implementation.
+
+Let's look at the lifecycle of our channel's senders in a sequence diagram.
+
+Note, at this point, we're only going to look at `Sender`.
+
+The `Receiver` implementation is identical, so it makes no sense to cover it.
+
+
+![Sequence diagram of the lifecycle of Sender objects. It covers 4 stages. Initial channel creation, cloning a sender, dropping a sender, and dropping the last sender. Where the final stage also closes the channel.](/img/understanding-async-await-4/mpmc_send_incdec-sequence_diagram.svg)
+
+During initial channel creation, a `Sender` is created with an inner channel.
+
+The `Sender` is responsible for calling `Channel::inc_senders()`.
+
+Now the inner channel will have a sender count of 1.
+
+The next case is sender cloning.
+
+(this is important to have multiple producers)
+
+(our receivers can also be cloned in the same way, giving us multiple consumers)
+
+(that's mpmc!)
+
+Here we rely on `Sender::new()` to increment the sender count in the inner channel.
+
+(this is why it made sense to put that logic in `new()`)
+
+The inner channel now has a sender count of 2.
+
+Then we get onto the drop logic.
+
+In Rust, the `Drop` trait gives structs a sort of destructor.
+
+We don't have to call `drop()` explicitly.
+
+It will be called automatically when an object goes out of scope.
+
+So we'll use this to decrement the counter.
+
+Imagine our cloned sender gets dropped.
+
+The counter gets decremented.
+
+So the inner channel's sender count is 1 again.
+
+Nothing more is done.
+
+Finally, the original sender is also dropped.
+
+This time the inner channel's sender count goes to 0.
+
+It calls `Channel::close()` on itself.
+
+Inside `close()`, the channel will also wake any still registered wakers.
+
+We would expect these to only be receiver wakers.
+
+But a `Send` future can be sent to another task before being polled.
+
+So it's possible that we have a sender waker registered for a `Send` future whose `Sender` has been dropped.
+
+It's just safer to wake everything left.
+
+This will avoid tasks that get stuck because they've lost their waker.
+
+For the first and second phases.
+
+(new channel and sender cloning)
+
+We will need the implementation of `new` and the `Clone` trait.
+
+Here they are.
+
+```rust
+impl Sender {
+    fn new(inner: Arc<Mutex<Channel>>) -> Self {
+        {
+            match inner.lock() {
+                Ok(mut guard) => guard.inc_senders(),
+                Err(_) => panic!("MPMC Channel has become corrupted."),
+            }
+        }
+        Self { inner }
+    }
+}
+```
+
+Note that `new()` needs to lock the mutex around the channel to get access to it.
+
+It could be poisoned.
+
+Which would cause us to panic.
+
+There's a reason we don't use `expect` on the result of `lock()`.
+
+We don't want to leak our implementation in the error message.
+
+(by implementation we mean the fact that we're using a mutex)
+
+So it's better to match the result.
+
+If the mutex hasn't been poisoned, we'll call `Channel::inc_senders()`.
+
+Clone will just pass the Arc-Mutex to new.
+
+```rust
+impl Clone for Sender {
+    fn clone(&self) -> Self {
+        Self::new(self.inner.clone())
+    }
+}
+```
+
+To implement `Drop` we will also need to lock the mutex.
+
+```rust
+impl Drop for Sender {
+    fn drop(&mut self) {
+        match self.inner.lock() {
+            Ok(mut guard) => guard.dec_senders(),
+            Err(_) => panic!("MPMC Channel has become corrupted."),
+        }
+    }
+}
+```
+
+As long as the mutex hasn't been poisoned, we call `Channel::dec_senders()`.
+
+The remaining logic is in a last few methods on `Channel`.
+
+```rust
+impl Channel {
+    /// Increment the sender count.
+    fn inc_senders(&mut self) {
+        self.senders += 1;
+    }
+
+    /// Decrement the sender count.
+    ///
+    /// If the count reaches zero, close the channel.
+    fn dec_senders(&mut self) {
+        self.senders -= 1;
+        if self.senders == 0 {
+            self.close();
+        }
+    }
+
+    /// Close the channel.
+    ///
+    /// All sender and receiver wakers which have been registered, but not yet
+    /// woken will get woken now.
+    fn close(&mut self) {
+        self.closed = true;
+
+        while let Some(waker) = self.sender_wakers.pop_front() {
+            waker.wake();
+        }
+        while let Some(waker) = self.receiver_wakers.pop_front() {
+            waker.wake();
+        }
+    }
+}
+```
+
+The method `inc_senders()` does nothing more than increment the counter.
+
+Whereas `dec_senders()` also checks for zero.
+
+If the counter reaches zero, it closes the channel.
+
+Finally, the `close()` method sets our boolean flag to true.
+
+Then it flushes all the wakers.
+
+Which means it pops them off their respective queues one by one.
+
+And wakes them.
+
+This will avoid stuck tasks.
+
+It also avoids a reference loop.
+
+Wait.
+
+A what?
+
+### a nasty reference loop
+
+Our implementation contains a nasty reference loop.
+
+This would result in a memory leak if not handled properly.
+
+(but don't stress, it is being handled properly)
+
+Let's explain.
+
+As long as a task is waiting to be woken, the runtime holds a reference to it.
+
+And our task owns the future it is currently polling.
+
+This would be the `Send` future for a producer task.
+
+And our `Send` future has an `Arc` of the inner channel.
+
+(via the mutex)
+
+This would prevent the `Arc`'s counter from ever going to zero.
+
+So the wakers would never be dropped.
+
+Which is unfortunate.
+
+As not even Tokio Console's *lost waker* lint would catch that.
+
+(since the waker count is still 1)
+
+(console can't know that it will never be used again)
+
+Here's a diagram of the loop.
+
+![Diagram showing a reference loop centring on the Send future in the inner channel.](/img/understanding-async-await-4/mpmc_reference_loop.svg)
+
+But since we wake all the wakers upon closing the channel.
+
+And the channel closing isn't dependent on the number of futures that may reference the inner channel.
+
+We break the loop and everything can be freed.
 
