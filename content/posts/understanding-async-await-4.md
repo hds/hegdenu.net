@@ -2,8 +2,7 @@
 title = "how I finally understood async/await in Rust (part 4)"
 slug = "understanding-async-await-4"
 author = "hds"
-date = "2023-08-31"
-draft = true
+date = "2023-09-05"
 +++
 
 You've reached the end of my series on understanding async/await in Rust.
@@ -101,7 +100,7 @@ It would wake the task at some point later when something is ready that wasn't r
 
 So let's build an interesting future.
 
-### an interesting future
+## an interesting future
 
 (this is the band formed after [pending future](@/posts/understanding-async-await-2.md#pending-future) split up)
 
@@ -111,7 +110,7 @@ But that's beyond the level of this series of posts.
 
 (this is a bit of a lie)
 
-(the truth is it's beyond me)
+(the truth is, it's beyond me)
 
 So let's build something that isn't too complex.
 
@@ -161,7 +160,7 @@ This diagram isn't particularly interesting.
 
 But it forms the basis for the next ones.
 
-Important parts are that there is only one of each thing.
+The important part is that there is only one of each thing.
 
 A single producer.
 
@@ -263,7 +262,7 @@ Multi-producer multi-consumer.
 
 As we just saw, a broadcast channel can be a sort of MPMC channel.
 
-The difference is that each message will only be received by a single consumer.
+The difference is that in this channel, each message will only be received by a single consumer.
 
 This is the sort of channel you would use to distribute work a finite number of tasks.
 
@@ -317,6 +316,10 @@ And it's going to be simple.
 
 (you know I'm all about simple)
 
+Here's the complete code: [`understanding_async_await::mpmc`](https://github.com/hds/hegdenu.net/blob/main/resources/understanding-async-await/src/mpmc.rs).
+
+In case you prefer having it from the beginning.
+
 Let's begin with the API.
 
 We'll base it on the `std` library and Tokio channel APIs.
@@ -334,7 +337,7 @@ Here's the signature for our `channel()` function.
 /// The channel will buffer messages up to the defined capacity. Once the
 /// buffer is full, attempts to send new messages will wait until a message is
 /// received from the channel. When the channel is empty, attempts to receive
-/// new messages will wait until  a message is sent to the channel.
+/// new messages will wait until a message is sent to the channel.
 ///
 /// If all receivers or all senders have disconnected, the channel will be
 /// closed. Subsequent attempts to send a message will return a
@@ -361,7 +364,7 @@ In the second paragraph, we specify that our channel will buffer messages.
 
 So the function requires the capacity.
 
-So `capacity` messages can be sent without any being received.
+This means `capacity` messages can be sent without any being received.
 
 Then what?
 
@@ -407,9 +410,9 @@ But once the channel is empty, new receive attempts would block forever.
 
 (I don't have a song for this one)
 
-(Really have used Unsent Letter here instead)
+(really should have used Unsent Letter here instead)
 
-Instead, an empty and closed channel will return an error to receive.
+Instead, trying to receive from a channel that is empty and closed will return an error.
 
 That seems pretty clear.
 
@@ -516,7 +519,7 @@ impl Receiver {
 
 ```
 
-Upon success, `recv` will return a `String`.
+Upon success, `recv()` will return a `String`.
 
 The only error it can return is `ChannelClosedError`.
 
@@ -526,9 +529,11 @@ Now we know the API we'd like to implement.
 
 Let's look at an example sequence diagram of how it would be used.
 
-We'll just use a single produce and single consumer to understand the async/await part better
+We'll just use a single produce and single consumer to understand the async/await part better.
 
 ![Sequence diagram of an mpmc channel. A main task creates a channel and then sends the receiver to a task to loop over receiving. the sender is sent to a different task to send 2 values.](/img/understanding-async-await-4/mpmc_api-sequence_diagram.svg)
+
+(code that implements this sequence can be found on GitHub: [channel_halves.rs](https://github.com/hds/hegdenu.net/blob/main/resources/understanding-async-await/src/bin/channel_halves.rs))
 
 Our main task calls `channel(1)` and gets the sender and receiver back.
 
@@ -584,7 +589,7 @@ Time to look at implementing this async functionality.
 
 This will involve implementing these two async functions.
 
-`Sender::send` and `Receiver::recv`.
+`Sender::send()` and `Receiver::recv()`.
 
 To do this we will need to implement futures manually.
 
@@ -622,15 +627,15 @@ So we'll create a `Channel` struct.
 
 This won't be public.
 
+We'll look at its implementation later.
+
 ### send future
 
-We're going to start with implementing `Sender::send`.
-
-We'll look at the contents of our internal channel later.
+We're going to start with implementing `Sender::send()`.
 
 Let's look at a sequence diagram of our three different outcomes.
 
-As we prepare to implement each layer, we'll expand upon this diagram.
+As we prepare to implement `Future`, we'll expand upon this diagram.
 
 ![Sequence diagram of the use of the async function Sender::send. It covers three use cases: channel has capacity, channel is closed, and channel is full.](/img/understanding-async-await-4/mpmc_send_async-sequence_diagram.svg)
 
@@ -694,7 +699,7 @@ We'll call our future `Send`.
 
 (imaginative names make less sense to others)
 
-First, here's that implementation of `Sender::send`.
+First, here's that implementation of `Sender::send()`.
 
 ```rust
 pub async fn send(&self, value: String) -> Result<(), ChannelClosedError> {
@@ -763,7 +768,7 @@ The first two states are fairly straight forward.
 
 So let's look at channel is full.
 
-In this case, `Channel::send` will return an error stating that the channel is full.
+In this case, `Channel::send()` will return an error stating that the channel is full.
 
 Our `Send` future will return `Poll::Pending`.
 
@@ -814,7 +819,7 @@ impl Future for Send {
 }
 ```
 
-The `Output` will be the same value that `Sender::send` returns.
+The `Output` will be the same value that `Sender::send()` returns.
 
 To begin with, we'll try to lock the mutex wrapping our inner channel.
 
@@ -828,7 +833,7 @@ In any event, we'll panic and be done with it.
 
 Then we'll call `send()` on our inner channel.
 
-We've already gone over teh details of what happens here in the sequence diagram.
+We've already gone over the details of what happens here in the sequence diagram.
 
 One implementation detail is that we clone the value to send to the inner channel.
 
@@ -858,7 +863,9 @@ Later we'll go over the implementation of the inner channel.
 
 ### recv future
 
-We've already shown the implementation for our async send function.
+We've just seen the implementation for our async send function.
+
+And the future that underpins it.
 
 Now let's look at the async function `Receiver::recv()`.
 
@@ -902,7 +909,7 @@ Even if the channel is closed.
 
 However, if the channel is closed and empty, and error is returned.
 
-This is the same error that the sender receives if the channel is closed.
+This is the same error that the sender returns if the channel is closed.
 
 
 **State: channel is empty (not closed).**
@@ -942,7 +949,7 @@ We see that we need a new future.
 
 Clearly we'll call it `Recv`.
 
-Note that `Receiver::recv` doesn't take any arguments.
+Note that `Receiver::recv()` doesn't take any arguments.
 
 (just `&self`, a reference to itself)
 
@@ -980,13 +987,13 @@ As it is always the same.
 
 We've further extended the necessary inner channel API.
 
-We also need a `Channel::recv` function.
+We also need a `Channel::recv()` function.
 
-Just like `Channel::send` it can return 3 values.
+Just like `Channel::send()` it can return 3 values.
 
 If there is a message to receive, it returns `Ok(msg)`.
 
-And our future can return `Poll::Ready` of the same.
+And our future can return `Poll::Ready` with that `msg`.
 
 If the channel is closed and empty, it returns `Err(ChannelRecvError::Closed)`.
 
@@ -1039,7 +1046,7 @@ impl Future for Recv {
 }
 ```
 
-As with `Send`, the `Output` is the same as the return type of `Receiver::recv`.
+As with `Send`, the `Output` is the same as the return type of `Receiver::recv()`.
 
 We lock the mutex around the inner channel.
 
@@ -1053,7 +1060,7 @@ We lock the mutex around the inner channel.
 
 (which is like everyone dying)
 
-Then we call `Channel::recv`.
+Then we call `Channel::recv()`.
 
 We've gone through the three options already.
 
@@ -1215,7 +1222,7 @@ Then we wake the next receiver.
 
 (more on this in a moment)
 
-And return `OK(())` as we're finished.
+And return `OK(())`, we're finished.
 
 If there isn't capacity, we return the `Full` error.
 
@@ -1260,7 +1267,7 @@ So we don't need to worry about access from multiple threads.
 
 (again, this is multi-threaded cheating, but it allows us to focus on the `Future` impl)
 
-The implementation for `Channel::recv` is similarly straight forward.
+The implementation for `Channel::recv()` is similarly straight forward.
 
 ```rust
 impl Channel {
@@ -1331,7 +1338,7 @@ What we haven't seen is how we determine that the channel is closed.
 
 And together with that, how we determine when the channel should still be open.
 
-We already saw on the `Channel` struct that we have a counter for senders and receivers.
+We already saw on the `Channel` struct that we have counters for senders and receivers.
 
 Now we need to implement the incrementing and decrementing of those counters.
 
@@ -1408,6 +1415,8 @@ It's just safer to wake everything left.
 
 This will avoid tasks that get stuck because they've lost their waker.
 
+Let's jump into the implementation.
+
 For the first and second phases.
 
 (new channel and sender cloning)
@@ -1448,6 +1457,10 @@ If the mutex hasn't been poisoned, we'll call `Channel::inc_senders()`.
 
 Clone will just pass the Arc-Mutex to new.
 
+This is also why we can't derive `Clone`.
+
+Because we need to call `Sender::new()`.
+
 ```rust
 impl Clone for Sender {
     fn clone(&self) -> Self {
@@ -1471,7 +1484,7 @@ impl Drop for Sender {
 
 As long as the mutex hasn't been poisoned, we call `Channel::dec_senders()`.
 
-The remaining logic is in a last few methods on `Channel`.
+The remaining logic is in the last few methods on `Channel`.
 
 ```rust
 impl Channel {
@@ -1523,7 +1536,7 @@ And wakes them.
 
 This will avoid stuck tasks.
 
-It also avoids a reference loop.
+It also avoids a nasty reference loop.
 
 Wait.
 
@@ -1539,7 +1552,7 @@ This would result in a memory leak if not handled properly.
 
 Let's explain.
 
-As long as a task is waiting to be woken, the runtime holds a reference to it.
+Until a task completes, it is owned by the runtime.
 
 And our task owns the future it is currently polling.
 
@@ -1574,6 +1587,14 @@ We break the loop and everything can be freed.
 As mentioned above, the receiver implementation is practically identical.
 
 So we won't cover it here.
+
+You can find it in the complete code though: [`understanding_async_await::mpmc`](https://github.com/hds/hegdenu.net/blob/main/resources/understanding-async-await/src/mpmc.rs).
+
+There is also a small example with multiple producers and consumers: [`channel`](https://github.com/hds/hegdenu.net/blob/main/resources/understanding-async-await/src/bin/channel.rs).
+
+In fact, you can check out my blog repo.
+
+And in there you can run lots of code from this series: [`understanding-async-await`](https://github.com/hds/hegdenu.net/tree/main/resources/understanding-async-await).
 
 ## the end
 
@@ -1623,7 +1644,11 @@ I plan to go back to writing smaller posts on whatever I happen to be doing at t
 
 Thanks to everyone for reading!
 
-A huge thank-you to the people who wrote to me to say how much they were enjoying and/or learning from the series.
+A few people wrote to me to say how much they were enjoying the series.
+
+(and/or learning something from it)
+
+A huge thank you to these very kind people!
 
 That was very motivating and always made my day.
 

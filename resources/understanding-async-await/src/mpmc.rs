@@ -11,7 +11,7 @@ use std::{collections::VecDeque, task::Poll};
 /// The channel will buffer messages up to the defined capacity. Once the
 /// buffer is full, attempts to send new messages will wait until a message is
 /// received from the channel. When the channel is empty, attempts to receive
-/// new messages will wait until  a message is sent to the channel.
+/// new messages will wait until a message is sent to the channel.
 ///
 /// If all receivers or all senders have disconnected, the channel will be
 /// closed. Subsequent attempts to send a message will return a
