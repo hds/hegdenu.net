@@ -14,7 +14,7 @@ Here's the full list:
 * [part 1: why doesn’t my task do anything if I don’t await it?](@/posts/understanding-async-await-1.md)
 * [part 2: how does a pending future get woken?](@/posts/understanding-async-await-2.md)
 * [part 3: why shouldn’t I hold a mutex guard across an await point?](#why-shouldn-t-i-hold-a-mutex-guard-across-an-await-point) (this very post)
-* part 4: why would I ever want to write a future manually? (not too long, we hope)
+* [part 4: why would I ever want to write a future manually?](@/posts/understanding-async-await-4.md) (available)
 
 Previously we looked at what happens when a future gets awaited.
 
@@ -1225,9 +1225,9 @@ This is a topic for a whole other blog post though.
 
 So we won't go into it here.
 
-In part 4, we will look at message passing and channels.
+In [part 4](@/posts/understanding-async-await-4.md), we look at message passing and channels.
 
-But for that, you'll have to wait.
+You can go and read it now!
 
 See you next time!
 
