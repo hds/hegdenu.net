@@ -4,6 +4,7 @@ dictionaryDefinitions: []
 dictionaries:
   - en-GB
 words:
+  - opentelemetry
   - println
   - struct
   - waker

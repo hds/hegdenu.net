@@ -1,0 +1,17 @@
+[package]
+name = "tokio-tracing"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.27.0", features = ["full", "tracing"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# Implements the types defined in the Otel spec
+opentelemetry = "0.20.0"
+# Integration between the tracing crate and the opentelemetry crate
+tracing-opentelemetry = "0.21.0" 
+# Allows you to export data to Jaeger
+opentelemetry-jaeger = "0.19.0"
