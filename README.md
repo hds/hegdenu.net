@@ -17,3 +17,16 @@ From the main directory, run:
 ```sh
 zola build
 ```
+# Testing
+
+From the main directory, run:
+
+```sh
+zola serve
+```
+
+To include draft posts as well:
+
+```sh
+zola serve --drafts
+```
