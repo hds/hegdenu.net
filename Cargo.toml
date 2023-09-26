@@ -6,4 +6,5 @@ members = [
     "resources/track_caller",
     "resources/understanding-async-await",
     "resources/tracing-reload",
+    "resources/tracing-tokio",
 ]
