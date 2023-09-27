@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ansi-to-html = "0.1.3"
 tokio = { version = "1.32", features = ["full", "tracing"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tracing-subscriber = "0.3"

@@ -1,16 +1,37 @@
-use std::time::Duration;
+use tracing_tokio::writer::HtmlWriter;
 
-use tracing_subscriber::EnvFilter;
+fn tracing_init() {
+    use tracing::Level;
+    use tracing_subscriber::{filter::FilterFn, fmt::format::FmtSpan, prelude::*};
+
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .pretty()
+        .with_span_events(FmtSpan::FULL)
+        // .map_writer(|w| move || HtmlWriter::new(w()))
+        .with_filter(FilterFn::new(|metadata| {
+            if metadata.target() == "tracing_tokio" {
+                true
+            } else if metadata.target() == "tokio::task" && metadata.name() == "runtime.spawn" {
+                true
+            } else {
+                false
+            }
+        }));
+    tracing_subscriber::registry().with(fmt_layer).init();
+}
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::builder().parse_lossy("tracing_tokio=info"))
-        .init();
+    // we will fill this in later!
+    tracing_init();
 
-    tracing::info!("step 1");
+    tokio::spawn(async {
+        tracing::info!("step 1");
 
-    tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    tracing::info!("step 2");
+        tracing::info!("step 2");
+    })
+    .await
+    .expect("joining task failed");
 }

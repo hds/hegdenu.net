@@ -213,6 +213,11 @@ pre {
 	font-size: 11pt;
 }
 
+pre.bespoke-code {
+	background-color: #2b303b;
+	color: #c0c5ce;
+}
+
 p code {
 	font-size: 90%;
 }
