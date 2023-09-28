@@ -492,34 +492,184 @@ Now we're ready!
 
 Let's see the output we get now.
 
-<pre class="bespoke-code"><code>  <span style='opacity:0.67'>2023-09-27T13:32:49.609363Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: new</span>
+<pre class="bespoke-code"><code>  <span style='opacity:0.67'>2023-09-28T12:44:27.559210Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: new</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 25, <b>loc.col</b>: 9
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
-  <span style='opacity:0.67'>2023-09-27T13:32:49.615907Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: enter</span>
+  <span style='opacity:0.67'>2023-09-28T12:44:27.567314Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: enter</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 25, <b>loc.col</b>: 9
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
-  <span style='opacity:0.67'>2023-09-27T13:32:49.621633Z</span> <span style='color:#0a0'> INFO</span> <b><span style='color:#0a0'>tracing_tokio</span></b><span style='color:#0a0'>: step 1</span>
-    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio/src/main.rs:26
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 25, <b>loc.col</b>: 9
+  <span style='opacity:0.67'>2023-09-28T12:44:27.574405Z</span> <span style='color:#0a0'> INFO</span> <b><span style='color:#0a0'>tracing_tokio</span></b><span style='color:#0a0'>: step 1</span>
+    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio/src/main.rs:33
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
-  <span style='opacity:0.67'>2023-09-27T13:32:49.627000Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: exit</span>
+  <span style='opacity:0.67'>2023-09-28T12:44:27.588111Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: exit</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 25, <b>loc.col</b>: 9
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
-  <span style='opacity:0.67'>2023-09-27T13:32:49.728407Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: enter</span>
+  <span style='opacity:0.67'>2023-09-28T12:44:27.683745Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task::waker</span></b><span style='color:#a0a'>: <b>op</b></span><span style='color:#a0a'>: &quot;waker.wake&quot;, <b>task.id</b></span><span style='color:#a0a'>: 1</span>
+    <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/runtime/task/waker.rs:83
+
+  <span style='opacity:0.67'>2023-09-28T12:44:27.690542Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: enter</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 25, <b>loc.col</b>: 9
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
-  <span style='opacity:0.67'>2023-09-27T13:32:49.735361Z</span> <span style='color:#0a0'> INFO</span> <b><span style='color:#0a0'>tracing_tokio</span></b><span style='color:#0a0'>: step 2</span>
-    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio/src/main.rs:30
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 25, <b>loc.col</b>: 9
+  <span style='opacity:0.67'>2023-09-28T12:44:27.710193Z</span> <span style='color:#0a0'> INFO</span> <b><span style='color:#0a0'>tracing_tokio</span></b><span style='color:#0a0'>: step 2</span>
+    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio/src/main.rs:37
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
-  <span style='opacity:0.67'>2023-09-27T13:32:49.741740Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: exit</span>
+  <span style='opacity:0.67'>2023-09-28T12:44:27.716654Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: exit</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 25, <b>loc.col</b>: 9
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
-  <span style='opacity:0.67'>2023-09-27T13:32:49.747868Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: close, <b>time.busy</b></span><span style='color:#a0a'>: 24.4ms, <b>time.idle</b></span><span style='color:#a0a'>: 114ms</span>
+  <span style='opacity:0.67'>2023-09-28T12:44:27.723284Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: close, <b>time.busy</b></span><span style='color:#a0a'>: 46.9ms, <b>time.idle</b></span><span style='color:#a0a'>: 117ms</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 25, <b>loc.col</b>: 9</code></pre>
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5</code></pre>
+
+Purple, wow!
+
+(actually magenta)
+
+What is new here is that there is a new span.
+
+It has the target `tokio::task`.
+
+The span also has a name, `runtime.spawn`.
+
+(remember, this is how we're filtering for these spans)
+
+Because we enabled span events, we can see the span lifecycle.
+
+The lifecycle state is at the end of the first line of each span event message.
+
+Here is an enter event: <code><span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: enter</span></code>
+
+We also have another event with the target `tokio::task::waker`
+
+The waker events are a bit verbose.
+
+So I've **manually** removed all all the ones that don't have `op=waker.wake`.
+
+(if you're interested in this, the other `op` values are `waker.clone` and `waker.drop`)
+
+There is something important about this `waker.wake` event.
+
+It is **not** inside the task span!
+
+(more on that later)
+
+And of course, our two previous events are still there.
+
+But now they're inside the `runtime.spawn` span!
+
+This means that from the logs, we could check which task they've come from!
+
+It's the task with the [`Id`](https://docs.rs/tokio/latest/tokio/task/struct.Id.html) 18.
+
+(you may have seen the `task.name` field too)
+
+(more on that later)
+
+We can visualise the spans and events in this trace.
+
+![Time diagram showing the spans and events from the previous trace output. The span has two small active sections, one shortly after the span is created and another shortly before it is closed. The two events emitted from within our code are shown within the active parts of the span. There is also an event outside of the span with field op=waker.wake.](/img/tracing-tokio/tracing-runtime_spawn.png)
+
+First thing to note about this diagram.
+
+It's not to scale!
+
+(that's what the dots in the span mean)
+
+But that doesn't matter, it's illustrative.
+
+(you shouldn't create diagrams like this for production logs)
+
+(it's incredibly laborious)
+
+(but I haven't found a way to automatically create pretty diagrams from tracing output)
+
+What we can see is that we have a span which is relatively long.
+
+And it has two much smaller active sections.
+
+Within each of these sections, we emit an event.
+
+(remember, our cleverly named `step 1` and `step 2`)
+
+This shows us that the task was polled twice.
+
+### calculation the poll time
+
+We can calculate the poll times!
+
+Just look at the difference between the `enter` and `exit` events.
+
+So the first poll took around 20ms.
+
+The second poll took around 26ms.
+
+That's interesting, I wonder why the second one took longer?
+
+(I wonder why they're taking so long at all)
+
+(20ms is a really long time!)
+
+### calculating the scheduled time
+
+We can also calculate the scheduled time for the second poll.
+
+That's the time between when it was woken and when it was polled.
+
+(I wrote a post about the [scheduled time](@/posts/task-scheduled-time-in-console/))
+
+(related to some tool, which I won't mention here to not spoil the end of this post)
+
+So, let's calculate the scheduled time.
+
+Let's find the wake time for our task.
+
+We know it's the one with `task.id=18`.
+
+But we only see a single `waker.wake` event.
+
+And it has `task.id=1`.
+
+What is going on here?
+
+Unfortunately there's some inconsistency in the Tokio instrumentation.
+
+The meaning of the field `task.id` is different in different contexts.
+
+When used on `runtime.spawn` span, it means the [`tokio::task::Id`](https://docs.rs/tokio/latest/tokio/task/struct.Id.html).
+
+But when used on a waker event, it refers to the [`tracing::span::Id`](https://docs.rs/tracing/latest/tracing/span/struct.Id.html) of a `runtime.spawn` span.
+
+This is unfortunate and a bit confusing.
+
+More so because the `fmt` layer doesn't have the option to output the span Id.
+
+It's considered internal.
+
+(and why parsing these traces "manually" isn't recommended)
+
+But anyway, in this case there's only one task, so we know which one it is.
+
+So we calculate the scheduled time as around 6ms.
+
+This is pretty high too.
+
+Especially because our runtime isn't doing **anything** else.
+
+There's something weird going on here.
+
+## the mystery of the delay
+
+Why do we have these large amounts of time between operations?
+
+(yes, 20ms is a large amount of time)
+
+(if you don't believe me, you should see [Rear Admiral Grace Hopper explaining nanoseconds](https://www.youtube.com/watch?v=9eyFDBPk4Yw))
+
+
+

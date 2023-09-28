@@ -1,17 +1,21 @@
 use tracing_tokio::writer::HtmlWriter;
 
 fn tracing_init() {
-    use tracing::Level;
     use tracing_subscriber::{filter::FilterFn, fmt::format::FmtSpan, prelude::*};
 
     let fmt_layer = tracing_subscriber::fmt::layer()
         .pretty()
         .with_span_events(FmtSpan::FULL)
-        // .map_writer(|w| move || HtmlWriter::new(w()))
+        .map_writer(|w| move || HtmlWriter::new(w()))
         .with_filter(FilterFn::new(|metadata| {
             if metadata.target() == "tracing_tokio" {
+                // All traces from our own crate
                 true
             } else if metadata.target() == "tokio::task" && metadata.name() == "runtime.spawn" {
+                // Spans representing tasks
+                true
+            } else if metadata.target() == "tokio::task::waker" {
+                // Events for waker operations
                 true
             } else {
                 false
