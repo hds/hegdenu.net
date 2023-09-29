@@ -2,8 +2,7 @@
 title = "tracing tokio tasks"
 slug = "tracing-tokio-tasks"
 author = "hds"
-date = "2023-09-05"
-draft = true
+date = "2023-09-29"
 +++
 
 Async programming can be tricky.
@@ -28,9 +27,9 @@ Then the first thing pauses again.
 
 What a mess!
 
-It would be nice if we had a way to analyse what is going on.
+It would be nice if we had a way to analyse what's going on.
 
-Even if this is after the fact.
+Even if it's after the fact.
 
 The good news is you can!
 
@@ -54,7 +53,7 @@ Although more of Tokio is also instrumented.
 
 ## aside: tracing
 
-Tracing is really an ecosystem all to itself.
+Tracing is really an ecosystem unto itself.
 
 At the core, Tracing is all about recording spans and events.
 
@@ -74,9 +73,7 @@ The start time and the end time.
 
 Let's look at a picture to illustrate the concept.
 
-(pun totally intended)
-
-![Time diagram showing an event as an instant in time (at time=1) and a span starting at time=3 and ending at time=6. There is another event inside the span at time=5.](/img/tracing-tokio/tracing-events_span.png)
+![Time diagram showing an event as an instant in time (at time=1) and a span starting at time=3 and ending at time=6. There is another event inside the span at time=5.](/img/tracing-tokio-tasks/tracing-events_span.png)
 
 Here we can see two events and a span.
 
@@ -102,19 +99,19 @@ Traditional logging frameworks generally take two pieces of input for a given lo
 
 The level.
 
-(error, warn, info, debug, etc.)
+(error, warn, info, debug, trace, and maybe more)
 
-The message
+The message.
 
 (some blob of text)
 
 It is then up to whatever aggregates the logs to work out what is what.
 
-(often the whatever is a person staring at their terminal)
+(often the *whatever* is a person staring at their terminal)
 
-This made sense when you logged to a byte stream of some sort.
+This made sense when you log to a byte stream of some sort.
 
-(a file, stdout, etc.)
+(a file, `stdout`, etc.)
 
 However we often produce too many logs for humans now.
 
@@ -122,11 +119,11 @@ So we want to optimise for machine readability.
 
 This is where structured logging is useful.
 
-Rather than spitting out any old text and then worrying about ingesting it.
+Rather than spitting out any old text and then worrying about format when ingesting it.
 
 We can write logs that can be easily parsed.
 
-To illustrate, let's look at a prime example of non-structured logs.
+To illustrate, let's look at an example of non-structured logs.
 
 I stole this example from a [Honeycomb blog post](https://www.honeycomb.io/blog/how-are-structured-logs-different-from-events).
 
@@ -152,7 +149,7 @@ Tracing events and spans have fields.
 
 So that the other side of the ecosystem can output nice structured logs.
 
-(the other side being Tracing subscribers)
+(the other side generally being something built with [`tracing-subscriber`](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/))
 
 Or even send them to distributed tracing system.
 
@@ -160,7 +157,7 @@ So you can match up what this machine is doing with what some other machines are
 
 And that's the great thing about spans.
 
-A spans children effectively inherit its fields.
+A span's children effectively inherit its fields.
 
 So if you set a request id on a span.
 
@@ -190,7 +187,7 @@ Now the span can enter and exit more times.
 
 Finally the span closes.
 
-![Time diagram showing the span lifecycle. The span is created (inactive), later entered and exited twice (so there are 2 active sections). Some time later it is closed.](/img/tracing-tokio/tracing-span_lifecycle.png)
+![Time diagram showing the span lifecycle. The span is created (inactive), later entered and exited twice (so there are 2 active sections). Some time later it is closed.](/img/tracing-tokio-tasks/tracing-span_lifecycle.png)
 
 The default `fmt` subscriber can give you the total busy and idle time for a span when it closes.
 
@@ -210,13 +207,13 @@ So let's write a very small async Rust program.
 
 And look at the instrumentation.
 
-The code is in the web-site repo: [tracing-tokio](https://github.com/hds/hegdenu.net/tree/main/resources/tracing-tokio).
+The code is in the web-site repo: [tracing-tokio-tasks](https://github.com/hds/hegdenu.net/tree/main/resources/tracing-tokio-tasks).
 
 We'll start with `Cargo.toml`
 
 ```toml
 [package]
-name = "tracing-tokio"
+name = "tracing-tokio-tasks"
 version = "0.1.0"
 edition = "2021"
 
@@ -232,9 +229,9 @@ Pretty straight forward list of dependencies.
 
 (but hopefully helps anyone following along in the future)
 
-We're looking at Tokio, so we'll need that.
+We're looking at `tokio`, so we'll need that.
 
-We want to use Tracing too.
+We want to use `tracing` too.
 
 And to actually output our traces, we need the `tracing-subscriber` crate.
 
@@ -262,7 +259,7 @@ OK, let's dig in.
 
 We're using `#[tokio::main]` so we're in an async context from the beginning.
 
-We set up tracing.
+We set up Tracing.
 
 (we'll get into exactly how later)
 
@@ -276,13 +273,13 @@ We're awaiting the join handle returned by `spawn()`.
 
 Now back into the task contents.
 
-We record a tracing event with the message `"step 1"`.
+We record an event with the message `"step 1"`.
 
 (it's at info level)
 
 Then we async sleep for 100ms.
 
-Then record another tracing event.
+Then record another event.
 
 This time with the message `"step 2"`.
 
@@ -319,13 +316,13 @@ The `fmt` layer in `tracing-subscriber` will write your traces to the console.
 
 Or to a file, or some other writer.
 
-The `fmt` layer is really flexible in many ways.
+The `fmt` layer is really flexible.
 
-We're going to use some of those.
+We're going to use some of that flexibility.
 
 We want [`.pretty()`](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/struct.Layer.html#method.pretty) output.
 
-This is a multi-line output which is easier to read on this web-site.
+This is a multi-line output which is easier to read on a web-site.
 
 (I never use this normally)
 
@@ -335,28 +332,25 @@ The call to `.with_span_events()` won't do anything just yet.
 
 Finally we have a [`.with_filter()`](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html#method.with_filter).
 
-For now we only want the spans from our own crate.
+For now we only want the events from our own crate.
 
 (that was simple, right?)
 
 Let's look at the result.
 
 <pre class="bespoke-code"><code>  <span style='opacity:0.67'>2023-09-27T13:46:56.852712Z</span> <span style='color:#0a0'> INFO</span> <b><span style='color:#0a0'>tracing_tokio</span></b><span style='color:#0a0'>: step 1</span>
-    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio/src/main.rs:29
+    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio-tasks/src/main.rs:29
 
   <span style='opacity:0.67'>2023-09-27T13:46:56.962809Z</span> <span style='color:#0a0'> INFO</span> <b><span style='color:#0a0'>tracing_tokio</span></b><span style='color:#0a0'>: step 2</span>
-    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio/src/main.rs:33</code></pre>
+    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio-tasks/src/main.rs:33</code></pre>
 
-We logs for each of our two events.
+We have logs for each of our two events.
 
 And they're roughly 100ms apart.
 
 (it's actually more like 110ms)
 
 (I wonder where that time went?)
-
-(today we don't care)
-
 
 OK, let's start tracing something inside Tokio.
 
@@ -391,9 +385,13 @@ Our `fmt` layer creation will now look like the following.
 
 Which is to say.
 
-We also accept the `tokio::task` target.
+We also accept traces with the target `tokio::task`.
 
 But only if the span's name is `runtime.spawn`.
+
+(and therefore, only if it's a span)
+
+(events don't have names)
 
 Now let's add the `tracing` feature.
 
@@ -419,7 +417,9 @@ That would seriously fragment Rust's async ecosystem.
 
 So it's unlikely to happen.
 
-An escape hatch is `tokio_unstable`.
+(soon at any rate)
+
+But there's an escape hatch: `tokio_unstable`.
 
 Anything behind `tokio_unstable` is considered fair game to break between minor releases.
 
@@ -427,7 +427,7 @@ This doesn't mean that the code is necessarily less tested.
 
 (although some of it hasn't been as extensively profiled)
 
-But it isn't guaranteed to be stable.
+But the APIs aren't guaranteed to be stable.
 
 I know of some very intensive workloads that are run with `tokio_unstable` builds.
 
@@ -450,21 +450,25 @@ Back to tracing!
 
 ## tracing tasks
 
-Each time a task is spawned, a span is created.
+Each time a task is spawned, a `runtime.spawn` span is created.
 
 When the task is polled, the span is entered.
 
 When the poll ends, the span is exited again.
 
-This way a task spawn span may be entered multiple times.
+This way a `runtime.spawn` span may be entered multiple times.
 
 When the task is dropped, the span is closed.
 
-(if you want to understand what polling is, I have a blog series for that)
+(unless the task spawned another task)
+
+(but that's actually incorrect behaviour in the instrumentation)
+
+If you want to understand what polling is, I have a blog series for that.
 
 (check out [how I finally understood async/await in Rust](@/posts/understanding-async-await-1.md))
 
-We'd like to see all these steps in the [span lifecycle](#span-lifecycle) in our logs.
+We'd like to see all these steps of the [span lifecycle](#span-lifecycle) in our logs.
 
 Which is where span events come in.
 
@@ -478,7 +482,7 @@ Specifically, events for each stage of a span's lifecycle.
 
 (new span, enter, exit, and close)
 
-We enable span events using [`.with_span_events()`](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/struct.Layer.html#method.with_span_events).
+We enable span events using [`.with_span_events(FmtSpan::FULL)`](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/struct.Layer.html#method.with_span_events) as seen in the original code.
 
 Now we're ready!
 
@@ -486,38 +490,38 @@ Let's see the output we get now.
 
 <pre class="bespoke-code"><code>  <span style='opacity:0.67'>2023-09-28T12:44:27.559210Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: new</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio-tasks/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
   <span style='opacity:0.67'>2023-09-28T12:44:27.567314Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: enter</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio-tasks/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
   <span style='opacity:0.67'>2023-09-28T12:44:27.574405Z</span> <span style='color:#0a0'> INFO</span> <b><span style='color:#0a0'>tracing_tokio</span></b><span style='color:#0a0'>: step 1</span>
-    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio/src/main.rs:33
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
+    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio-tasks/src/main.rs:33
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio-tasks/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
   <span style='opacity:0.67'>2023-09-28T12:44:27.588111Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: exit</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio-tasks/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
   <span style='opacity:0.67'>2023-09-28T12:44:27.683745Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task::waker</span></b><span style='color:#a0a'>: <b>op</b></span><span style='color:#a0a'>: &quot;waker.wake&quot;, <b>task.id</b></span><span style='color:#a0a'>: 1</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/runtime/task/waker.rs:83
 
   <span style='opacity:0.67'>2023-09-28T12:44:27.690542Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: enter</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio-tasks/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
   <span style='opacity:0.67'>2023-09-28T12:44:27.710193Z</span> <span style='color:#0a0'> INFO</span> <b><span style='color:#0a0'>tracing_tokio</span></b><span style='color:#0a0'>: step 2</span>
-    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio/src/main.rs:37
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
+    <span style='opacity:0.67'><i>at</i></span> resources/tracing-tokio-tasks/src/main.rs:37
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio-tasks/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
   <span style='opacity:0.67'>2023-09-28T12:44:27.716654Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: exit</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio-tasks/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5
 
   <span style='opacity:0.67'>2023-09-28T12:44:27.723284Z</span> <span style='color:#a0a'>TRACE</span> <b><span style='color:#a0a'>tokio::task</span></b><span style='color:#a0a'>: close, <b>time.busy</b></span><span style='color:#a0a'>: 46.9ms, <b>time.idle</b></span><span style='color:#a0a'>: 117ms</span>
     <span style='opacity:0.67'><i>at</i></span> /Users/stainsby/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.32.0/src/util/trace.rs:17
-    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5</code></pre>
+    <span style='opacity:0.67'><i>in</i></span> tokio::task::<b>runtime.spawn</b> <span style='opacity:0.67'><i>with</i></span> <b>kind</b>: task, <b>task.name</b>: , <b>task.id</b>: 18, <b>loc.file</b>: &quot;resources/tracing-tokio-tasks/src/main.rs&quot;, <b>loc.line</b>: 32, <b>loc.col</b>: 5</code></pre>
 
 Purple, wow!
 
@@ -541,7 +545,7 @@ We also have another event with the target `tokio::task::waker`
 
 The waker events are a bit verbose.
 
-So I've **manually** removed all all the ones that don't have `op=waker.wake`.
+So I've **manually** removed all the ones that don't have `op=waker.wake`.
 
 (if you're interested in this, the other `op` values are `waker.clone` and `waker.drop`)
 
@@ -557,15 +561,11 @@ But now they're inside the `runtime.spawn` span!
 
 This means that from the logs, we could check which task they've come from!
 
-It's the task with the [`Id`](https://docs.rs/tokio/latest/tokio/task/struct.Id.html) 18.
-
-(you may have seen the `task.name` field too)
-
-(more on that later)
+It's the task with [`Id`](https://docs.rs/tokio/latest/tokio/task/struct.Id.html)`=18`.
 
 We can visualise the spans and events in this trace.
 
-![Time diagram showing the spans and events from the previous trace output. The span has two small active sections, one shortly after the span is created and another shortly before it is closed. The two events emitted from within our code are shown within the active parts of the span. There is also an event outside of the span with field op=waker.wake.](/img/tracing-tokio/tracing-runtime_spawn.png)
+![Time diagram showing the spans and events from the previous trace output. The span has two small active sections, one shortly after the span is created and another shortly before it is closed. The two events emitted from within our code are shown within the active parts of the span. There is also an event outside of the span with field op=waker.wake.](/img/tracing-tokio-tasks/tracing-runtime_spawn.png)
 
 First thing to note about this diagram.
 
@@ -623,7 +623,7 @@ That's the time between when it was woken and when it was polled.
 
 (I wrote a post about the [scheduled time](@/posts/scheduled-time.md))
 
-(related to some tool, which I won't mention here to not spoil the end of this post)
+(related to some tool, which I won't mention here to not spoil the end)
 
 So, let's calculate the scheduled time.
 
@@ -637,9 +637,9 @@ And it has `task.id=1`.
 
 What is going on here?
 
-Unfortunately there's some inconsistency in the Tokio instrumentation.
+It turns out, there's some inconsistency in the Tokio instrumentation.
 
-The meaning of the field `task.id` is different in different contexts.
+The meaning of the field `task.id` has different meanings in different contexts.
 
 When used on `runtime.spawn` span, it means the [`tokio::task::Id`](https://docs.rs/tokio/latest/tokio/task/struct.Id.html).
 
@@ -669,9 +669,9 @@ Why do we have these large amounts of time between operations?
 
 (yes, 20ms is a large amount of time)
 
-(if you don't believe me, you should see [Rear Admiral Grace Hopper explaining nanoseconds](https://www.youtube.com/watch?v=9eyFDBPk4Yw))
+(if you don't believe me, please see [Rear Admiral Grace Hopper explaining nanoseconds](https://www.youtube.com/watch?v=9eyFDBPk4Yw))
 
-It's all my fault.
+It turns out it's all my fault.
 
 The code in the examples is missing something.
 
@@ -681,21 +681,21 @@ I wanted to show the colourised output that you get in an ANSI terminal.
 
 So I wrapped the pretty [`FormatEvent`](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/trait.FormatEvent.html) implementation with another writer.
 
-This [`HtmlWriter`](https://github.com/hds/hegdenu.net/blob/main/resources/tracing-tokio/src/writer.rs) takes the output and converts ANSI escape codes to HTML.
+This [`HtmlWriter`](https://github.com/hds/hegdenu.net/blob/main/resources/tracing-tokio-tasks/src/writer.rs) takes the output and converts ANSI escape codes to HTML.
 
 Fantastic!
 
-Now I have pretty output.
+Now I have pretty output on my web-site.
 
-Unfortunately it's pretty slow.
+But it's very slow.
 
 The `fmt` layer writes bytes out.
 
-So these had to be read into a (UTF-8) `&str` and then get converted.
+These have to be read into a (UTF-8) `&str` and then get converted.
 
-Which required another copy of the data.
+Which requires another copy of the data.
 
-Then it was all written out.
+Then it's all written out.
 
 My bet is that something in the [ansi_to_html](https://docs.rs/ansi-to-html/latest/ansi_to_html/) crate is slowing things down.
 
@@ -727,12 +727,14 @@ It's [Tokio Console](https://github.com/tokio-rs/console).
 
 I've mentioned it in other posts.
 
-The alternative to get a finer grained view would be some tracing visualisation.
+Another option would be to have direct visualisation of the traces.
 
 Unfortunately, I haven't found anything that does this well.
 
 (hence the magnificent hand drawn visualisation used in this post)
 
 If you know of something, I would love to [hear from you](@/about.md#contact).
+
+
 
 
