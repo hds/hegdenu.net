@@ -1,6 +1,6 @@
 +++
-title = "tracing tokio"
-slug = "tracing-tokio"
+title = "tracing tokio tasks"
+slug = "tracing-tokio-tasks"
 author = "hds"
 date = "2023-09-05"
 draft = true
@@ -28,37 +28,29 @@ Then the first thing pauses again.
 
 What a mess!
 
+It would be nice if we had a way to analyse what is going on.
 
-
-
-
-
-
-
-[Tokio](https://tokio.rs/) is currently the most popular async runtime in Rust.
-
-
-
-
-
-
-
-
-
-
-
-
-Wouldn't it be nice if you could visualise what your async program is doing?
+Even if this is after the fact.
 
 The good news is you can!
 
-(the not so good news is that the visualisation could be improved.)
+(the not so good news is that the visualisation could be improved)
 
 How is this possible?
 
-Tokio is instrumented!
+[Tokio](https://tokio.rs/) is instrumented!
+
+(I'm talking about Tokio because I'm familiar with it)
+
+(there are many other async runtimes for Rust which may also be instrumented)
+
+(although I don't know of any)
 
 Parts of the Tokio codebase are instrumented with [Tracing](https://github.com/tokio-rs/tracing).
+
+We're going to look specifically at tracing tasks in this post.
+
+Although more of Tokio is also instrumented.
 
 ## aside: tracing
 
@@ -599,6 +591,14 @@ Within each of these sections, we emit an event.
 
 This shows us that the task was polled twice.
 
+And we see that the `op=waker.wake` event isn't in the `runtime.spawn` span.
+
+This means that the task didn't wake itself.
+
+It was woken by something else.
+
+(which is enough information for now)
+
 ### calculation the poll time
 
 We can calculate the poll times!
@@ -621,7 +621,7 @@ We can also calculate the scheduled time for the second poll.
 
 That's the time between when it was woken and when it was polled.
 
-(I wrote a post about the [scheduled time](@/posts/task-scheduled-time-in-console/))
+(I wrote a post about the [scheduled time](@/posts/scheduled-time.md))
 
 (related to some tool, which I won't mention here to not spoil the end of this post)
 
@@ -671,5 +671,68 @@ Why do we have these large amounts of time between operations?
 
 (if you don't believe me, you should see [Rear Admiral Grace Hopper explaining nanoseconds](https://www.youtube.com/watch?v=9eyFDBPk4Yw))
 
+It's all my fault.
+
+The code in the examples is missing something.
+
+It's not the code that was run to produce the output snippets.
+
+I wanted to show the colourised output that you get in an ANSI terminal.
+
+So I wrapped the pretty [`FormatEvent`](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/trait.FormatEvent.html) implementation with another writer.
+
+This [`HtmlWriter`](https://github.com/hds/hegdenu.net/blob/main/resources/tracing-tokio/src/writer.rs) takes the output and converts ANSI escape codes to HTML.
+
+Fantastic!
+
+Now I have pretty output.
+
+Unfortunately it's pretty slow.
+
+The `fmt` layer writes bytes out.
+
+So these had to be read into a (UTF-8) `&str` and then get converted.
+
+Which required another copy of the data.
+
+Then it was all written out.
+
+My bet is that something in the [ansi_to_html](https://docs.rs/ansi-to-html/latest/ansi_to_html/) crate is slowing things down.
+
+(but only because I tried using [`str::from_utf8_unchecked`](https://doc.rust-lang.org/stable/std/str/fn.from_utf8_unchecked.html) and it didn't help)
+
+And that's all the resolution you're going to get today I'm afraid.
+
+Maybe another day we can profile the writer to see what is actually so slow.
+
+When I disable the custom writer, it's a very different story.
+
+There is less than 700 **microseconds** of busy time for the `runtime.spawn` span.
+
+Whereas in the example above, there are more than 46 **milliseconds** of busy time.
+
+## don't do this at home
+
+Reading the traces produced by Tokio like this isn't advisable.
+
+Even this trivial example produces a lot of output.
+
+Instead you should use something to analyse this data for you.
+
+And show useful conclusions.
+
+And there's a tool for that.
+
+It's [Tokio Console](https://github.com/tokio-rs/console).
+
+I've mentioned it in other posts.
+
+The alternative to get a finer grained view would be some tracing visualisation.
+
+Unfortunately, I haven't found anything that does this well.
+
+(hence the magnificent hand drawn visualisation used in this post)
+
+If you know of something, I would love to [hear from you](@/about.md#contact).
 
 

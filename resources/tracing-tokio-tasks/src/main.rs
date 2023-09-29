@@ -1,4 +1,4 @@
-use tracing_tokio::writer::HtmlWriter;
+use tracing_tokio_tasks::writer::HtmlWriter;
 
 fn tracing_init() {
     use tracing_subscriber::{filter::FilterFn, fmt::format::FmtSpan, prelude::*};
