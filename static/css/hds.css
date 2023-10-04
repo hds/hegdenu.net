@@ -61,7 +61,6 @@ h1,
 h2,
 h3,
 h4,
-h5,
 .page-title,
 .section .emph,
 .nav-item.active,
@@ -80,6 +79,15 @@ h3.section {
 h4.section {
 	margin: 20px 0 10px 0;
 }
+
+h5 span.date,
+h5 span.author {
+	color: #8800ff;
+}
+
+/* h5 span.author {
+	color: #333;
+} */
 
 .separator {
 	width: 70%;

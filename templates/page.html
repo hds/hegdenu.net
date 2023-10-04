@@ -5,7 +5,10 @@
 {% block content %}
 <div class="post">
     <h1><a href="{{ page.permalink }}">{{ page.title }}</a></h1>
-    <h5>{{ page.date | date(format="%A, %e %B %Y") }}</h5>
+    <h5>
+        by <span class="author">Hayden Stainsby</span>
+        on <span class="date">{{ page.date | date(format="%A, %e %B %Y") }}</span>
+    </h5>
 
     <div>{{ page.content | safe }}</div>
 </div>

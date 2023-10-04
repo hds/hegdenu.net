@@ -1,8 +1,9 @@
 {% for page in section.pages %}
 <div class="post">
     <h2><a href="{{ page.permalink }}">{{ page.title }}</a></h2>
-    <h5>{{ page.date | date(format="%A, %-d %B %Y") }}</h5>
-
+    <h5>
+        on <span class="date">{{ page.date | date(format="%A, %e %B %Y") }}</span>
+    </h5>
     <div>{{ page.content | safe }}</div>
 
     {% if not loop.last %}<div class="separator"></div>{% endif %}
