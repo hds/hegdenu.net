@@ -7,9 +7,7 @@ date = "2023-10-31"
 
 Today we had the first [Rust for Lunch](https://lunch.rs/meetups/2023-10-31/) meet-up.
 
-It was ...
-
-(insert result here)
+I was really happy with the result.
 
 As a bit of a post-mortem, I thought I'd write up the process.
 
@@ -121,4 +119,64 @@ And in the meantime, I'd been given another suggestion for software.
 
 [![@mo8it@fosstodon.org @hds@hachyderm.io I think @senfcall@chaos.social would also be a great fit.](/img/virtual-rust-meet-up/beowulf@procial.tchncs.de-111257489700126922.png)](https://hachyderm.io/deck/@beowulf@procial.tchncs.de/111257489700126922)
 
-Specifically [Senfcall](https://www.senfcall.de/en/)
+Specifically [Senfcall](https://www.senfcall.de/en/).
+
+It's very privacy based and doesn't offer recording options.
+
+So that was it, I chose privacy over posterity.
+
+## publicity
+
+This is an area I was unsure of.
+
+On the one hand, I wanted to get a decent sized audience.
+
+On the other hand, I was wary of having the software overloaded on the first try.
+
+As I'd never used Senfcall for anything, I didn't know how it would handle load.
+
+(although they claim to have run calls with 200 people)
+
+In the end I publicised through 4 channels.
+
+* A fairly popular semi-public Discord server I'm on.
+
+* Via my Mastodon account [@hds@hachyderm.io](https://hachyderm.io/@hds).
+
+* This Week In Rust's [Upcoming Events](https://this-week-in-rust.org/blog/2023/10/25/this-week-in-rust-518/#virtual) section
+
+* In our Rust group at work.
+
+As far as I know, no one else publicised the event.
+
+For next time I'd probably try to promote on Reddit [r/rust](https://www.reddit.com/r/rust/) and perhaps on Twitter.
+
+(sorry, sorry, I mean X)
+
+## wrap up
+
+How did it go?
+
+As I said at the beginning, I was really happy with the result.
+
+Conrad's talk was entertaining and very well received.
+
+We had 25 people join.
+
+(including me, so perhaps count 24 of them)
+
+And I got some good feedback after the meet-up from people who said they enjoyed it.
+
+There was one person I know of who had technical trouble and couldn't join.
+
+Which is a real shame.
+
+I may need to try some different software before the next one.
+
+(speaking of a next one...)
+
+I'm already planning the next meet-up.
+
+It will be in 4 weeks on [28 November, 2023](https://lunch.rs/meetups/2023-11-28/)!
+
+It's a very exciting time!
