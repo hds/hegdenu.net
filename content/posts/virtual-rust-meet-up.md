@@ -57,7 +57,7 @@ I had a little experience with the format.
 
 At work we have a "Rustacean Meet" every 4 weeks.
 
-It's a work thing, but otherwise very similar.
+It's a work thing, but otherwise very similar to what I wanted.
 
 A one hour slot.
 
@@ -90,6 +90,8 @@ He also seemed to just have a topic ready.
 So that was easy.
 
 I hope finding the second speaker will be just as easy.
+
+(if that might be you, [get in touch](@/about.md#contact))
 
 ## software
 
@@ -139,19 +141,21 @@ As I'd never used Senfcall for anything, I didn't know how it would handle load.
 
 In the end I publicised through 4 channels.
 
-* A fairly popular semi-public Discord server I'm on.
+* A fairly popular semi-public Discord server I'm on
 
-* Via my Mastodon account [@hds@hachyderm.io](https://hachyderm.io/@hds).
+* Via my Mastodon account [@hds@hachyderm.io](https://hachyderm.io/@hds)
 
 * This Week In Rust's [Upcoming Events](https://this-week-in-rust.org/blog/2023/10/25/this-week-in-rust-518/#virtual) section
 
-* In our Rust group at work.
+* In our Rust group at work
 
 As far as I know, no one else publicised the event.
 
 For next time I'd probably try to promote on Reddit [r/rust](https://www.reddit.com/r/rust/) and perhaps on Twitter.
 
 (sorry, sorry, I mean X)
+
+Anywhere else I should consider?
 
 ## wrap up
 
