@@ -7,4 +7,5 @@ members = [
     "resources/understanding-async-await",
     "resources/tracing-reload",
     "resources/tracing-tokio-tasks",
+    "resources/debugging-tokio-instrumentation",
 ]
