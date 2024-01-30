@@ -2,29 +2,31 @@
 title = "debugging tokio instrumentation"
 slug = "debugging-tokio-instrumentation"
 author = "hds"
-date = "2024-01-31"
-draft = true
+date = "2024-01-30"
 +++
 
 I contribute to [`tokio-console`](https://github.com/tokio-rs/console). One of the things that I
-often find myself doing, is matching what is shown in the console with the "raw"
-[`tracing`](https://docs.rs/tracing) output that comes from Tokio. However, this is pretty hard to
-read and doesn't actually contain all the information that I need.
+often find myself doing is matching what is shown in the console with the "raw" [`tracing`] output
+that comes from Tokio. However, this is pretty hard to read and doesn't actually contain all the
+information that I need.
+
+[`tracing`]: https://docs.rs/tracing
 
 There are a couple of things that I'd like to have. Firstly (and most importantly), I need to see
-Tracing's internal span ID for the spans that are output. This is something which the
-[`fmt::Subscriber`] (and underlying Layer) don't support. And probably rightly so - it's internal
+Tracing's internal [`span::Id`] for the spans that are emitted. This is something which the
+[`fmt::Subscriber`] (and underlying Layer) don't support. And rightly so - it's internal
 information. But it's used heavily in the instrumentation in Tokio and to debug, I really need
 to have it available.
 
+[`span::Id`]: https://docs.rs/tracing/0.1.40/tracing/span/struct.Id.html
 [`fmt::Subscriber`]: https://docs.rs/tracing-subscriber/0.3.18/tracing_subscriber/fmt/struct.Subscriber.html
 
 Normally, to get this information I use a patched version of the `tracing-subscriber` crate. But
 this is something that can't be checked into the console project, and setting it up each time is a
 bit tedious.
 
-Secondly, I'd like to be able to visually differentiate different types of spans which are specific
-to Tokio's instrumentation. Unlike the internal span ID, this is entirely domain specific, and has
+Secondly, I'd like to be able to visually differentiate the specific spans and events used in
+Tokio's instrumentation. Unlike the internal span ID, this is entirely domain specific, and has
 no use outside of this specific use case.
 
 Having now justified something I wanted to do anyway, let's build our own custom tracing subscriber!
@@ -58,7 +60,7 @@ in that what one layer does affects what the next layer receives).
 [`tower`]: https://docs.rs/tower
 
 Instead, think of layers as mini-subscribers. They can take action on some methods on the [`Layer`]
-trait, but can fall back on the default implementation for things that they're not interested in.
+trait, but can fall back to the default implementation for things that they're not interested in.
 And [`Layer`] has a default implementation for everything.
 
 Most layers need to store information about spans, this is where the [registry] comes in
@@ -72,7 +74,7 @@ The reason why storing this data in the registry is important may not be immedia
 
 It's because [`tracing`] itself **doesn't** store this data. This allows [`tracing`] to not
 allocate for the data and therefore be used in [`no_std`] environments as well as the giant servers
-and beefy development machines that many of us are used to.
+and beefy development machines that many of us are accustomed to.
 
 [`no_std`]: https://docs.rust-embedded.org/book/intro/no-std.html
 
@@ -81,13 +83,13 @@ Here's an example for clarity. When a span is created, a [`Subscriber`] receives
 information about that span. Its metadata, field names, and also the values of any fields that were
 set at the time of creation.
 
-[`new_span`]: https://docs.rs/tracing/0.1.40/tracing/trait.Subscriber.html#tymethod.new_span
+[`new_span()`]: https://docs.rs/tracing/0.1.40/tracing/trait.Subscriber.html#tymethod.new_span
 [`Attributes`]: https://docs.rs/tracing/0.1.40/tracing/span/struct.Attributes.html
 
 This is great, it's everything we could need!
 
 Now let's look at the method that gets called when a span is entered (becomes active), this is
-called [`enter()`] and all it comes with is... a span [`Id`]. No metadata, no field names, and
+called [`enter()`] and all it comes with is... a [`span::Id`]. No metadata, no field names, and
 certainly no field values. And this pattern repeats on the trait methods called when a span exits
 or is closed.
 
@@ -97,16 +99,20 @@ Using the registry to store whatever data a layer might need about a span later 
 This allows the [`fmt::Subscriber`] to print out the full data for each span in an event's
 ancestry.
 
-This section went into a bit more detail than I was planning, so I'll leave it at that.
+Now that we understand a bit about what subscribers and layers are, let’s get into implementing
+some of it!
 
 ## ari-subscriber
 
-The meet the needs of my use-case, as described above, I've written the [`ari-subscriber`] crate.
+To meet the needs of my use-case, as described above, I've written the [`ari-subscriber`] crate.
 It's currently at version 0.0.1, which indicates that it's probably a bit rough, but so far it's
 already helped me quickly narrow down the version of Tokio after which `yield_now()` [doesn't get
 detected as a self wake by Tokio Console](https://github.com/tokio-rs/console/issues/512).
 
 [`ari-subscriber`]: https://docs.rs/ari-subscriber/0.0.1/ari_subscriber/index.html
+
+The “ari” in ari-subscriber is for “async runtime instrumentation”.
+
 
 The interface is simple, you pass an `ari-subscriber` layer to the [registry]:
 
@@ -141,10 +147,10 @@ async fn main() {
 }
 ```
 
-We start in an async context (using the `#[tokio::main]` attribute). First we set up the layer
-from `ari-subscriber` as our subscriber. Then we spawn a task and wait for it to complete. The task
-emits a tracing event and then returns control to the runtime by calling the [`yield_now()`]
-function from Tokio.
+We start in an async context (using the `#[tokio::main]` attribute). First we set up the
+`ari-subscriber` layer with the registry. Then we spawn a task and wait for it to complete. The
+task emits a tracing event and then returns control to the runtime by calling the [`yield_now()`]
+function from Tokio. After that it ends
 
 [`yield_now()`]: https://docs.rs/tokio/1.35.1/tokio/task/fn.yield_now.html
 
@@ -168,7 +174,8 @@ tracing-subscriber = "0.3.18"
 We set the version of Tokio to `=1.22.0`, this indicates that we want exactly this version. By
 default, `cargo` would take any `1.x` version where `x` is greater than or equal to 22.
 
-Now let's look at the output (truncated a little bit to remove things that we won't be focused on).
+Now let's look at the output (truncated a little bit to remove things that we won't be focusing
+on).
 
 <pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-01-30</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:43:24</span></b></span><span style='opacity:0.67'>.010351Z</span> <span style='color:#9d4edd'>TRACE</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=, task.id=18, loc.file=&quot;src/main.rs&quot;, loc.line=10, loc.col=5}</span> <b><u><span style='color:#5aba84'>new</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-01-30</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:43:24</span></b></span><span style='opacity:0.67'>.010695Z</span> <span style='color:#9d4edd'>TRACE</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=, task.id=18, loc.file=&quot;src/main.rs&quot;, loc.line=10, loc.col=5}</span> <b><u><span style='color:#5aba84'>enter</span></u></b>
@@ -182,25 +189,25 @@ Now let's look at the output (truncated a little bit to remove things that we wo
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-01-30</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:43:24</span></b></span><span style='opacity:0.67'>.011065Z</span> <span style='color:#9d4edd'>TRACE</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=, task.id=18, loc.file=&quot;src/main.rs&quot;, loc.line=10, loc.col=5}</span> <b><u><span style='color:#5aba84'>close</span></u></b>
 </code></pre>
 
-Unfortunately it's way to wide for visualising nicely on this web-site. But let's walk through it.
+Unfortunately it's way to wide to visualise nicely on this web-site. But let's walk through it.
 
 The date and time and log level is pretty straight forward. I took the log level colours from the
 [`fmt::Subscriber`], so those should be familiar.
 
 ### trace types 
 
-Most of the lines in the output are prefixed with a span named `runtime.spawn`. Spans with this
-name instrument tasks, `ari-subscriber` colours them green. There are district types of
-instrumentation in Tokio, and they each get their own colour.
+All the lines in the output are prefixed with a span named `runtime.spawn`. Spans with this name
+instrument tasks, `ari-subscriber` colours them green. There are district types of instrumentation
+in Tokio, and they each get their own colour.
 
-* <span style='color:#489e6c'>runtime.spawn</span> spans (green) instrument tasks
-* <span style='color:#ba5a57'>runtime.resource</span> spans (red) instrument resources
-* <span style='color:#5c8dce'>runtime.resource.async_op</span> spans (blue) instrument async operations
-* <span style='color:#e5e44d'>runtime.resource.async_op.poll</span> spans (yellow) instrument the individual polls on async operations
-* <span style='color:#c77dff'>tokio::task::waker</span> events (purple) represent discrete waker operations
-* <span style='color:#ff9f1c'>runtime::resource::poll_op</span> events (orange) represent poll state changes
-* <span style='color:#ff4d6d'>runtime::resource::state_update</span> events (pink) represent resource state changes
-* <span style='color:#68d8d6'>runtime::resource::async_op::state_update</span> events (turquoise) represent async operation state changes
+* <span style='color:#489e6c;background-color:#2b303b;padding:2px'>runtime.spawn</span> spans (green) instrument tasks
+* <span style='color:#ba5a57;background-color:#2b303b;padding:2px'>runtime.resource</span> spans (red) instrument resources
+* <span style='color:#5c8dce;background-color:#2b303b;padding:2px'>runtime.resource.async_op</span> spans (blue) instrument async operations
+* <span style='color:#e5e44d;background-color:#2b303b;padding:2px'>runtime.resource.async_op.poll</span> spans (yellow) instrument the individual polls on async operations
+* <span style='color:#c77dff;background-color:#2b303b;padding:2px'>tokio::task::waker</span> events (purple) represent discrete waker operations
+* <span style='color:#ff9f1c;background-color:#2b303b;padding:2px'>runtime::resource::poll_op</span> events (orange) represent poll state changes
+* <span style='color:#ff4d6d;background-color:#2b303b;padding:2px'>runtime::resource::state_update</span> events (pink) represent resource state changes
+* <span style='color:#68d8d6;background-color:#2b303b;padding:2px'>runtime::resource::async_op::state_update</span> events (turquoise) represent async operation state changes
 
 In the case of spans, the value given above is the span name, for events it is the target.
 
@@ -214,14 +221,14 @@ learn about those!
 
 Now let's get back to the output of `ari-subscriber` for our test program. The first line ends in
 <b><u><span style='color:#5aba84'>new</span></u></b>, this is an event representing the creation of a
-new span. There are equivalent lines for `enter`, `exit`, and `close` all parts of the span
+new span. There are equivalent lines for `enter`, `exit`, and `close`; all parts of the span
 lifecycle. See the [span lifecycle](@/posts/tracing-tokio-tasks.md#span-lifecycle) section of the
 post I linked above for a refresher on the lifecycle.
 
 By default, the [`fmt::Subscriber`] doesn't output these "span events", but it can be configured to
-do so with the [`with_span_event()`] method on the builder. Currently `ari-subscriber` always emits
-these span events, but I may wish to make this configurable in the future to reduce the amount of
-output.
+do so with the [`with_span_events()`] method on the builder. Currently `ari-subscriber` always
+emits these span events, but I may wish to make this configurable in the future to reduce the
+amount of output.
 
 [`with_span_events()`]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/fmt/struct.SubscriberBuilder.html#method.with_span_events
 
@@ -235,12 +242,12 @@ debugging_tokio_instrumentation: fun=true pre-yield
 ```
 
 The first bit (`debugging_tokio_instrumentation`) is the target, which by default is the same as
-the module path (so it's the name of our example application). After the colon are the fields
-(just one field: `fun=true`) and finally the message (`pre-yield`). An event's message is actually
-just a specially handled field with the name `message`. This event isn't coloured because it isn't
-part of the instrumentation that `ari-subscriber` knows about. 
+the module path so it's the name of our example application. After the colon are the fields (just
+one field: `fun=true`) and finally the message (`pre-yield`). An event's message is actually just a
+specially handled field with the name `message`. This event isn't coloured because it isn't part of
+the instrumentation that `ari-subscriber` knows about. 
 
-The following line is the wake operation (it's purple!). We can see that its target is
+The next line is the wake operation (it's purple!). We can see that its target is
 `tokio::task::waker` and then it has 2 fields and no message. The fields are
 `op="waker.wake_by_ref"` and `task.id=1`. 
 
@@ -249,11 +256,10 @@ being woken. The instrumentation ID of a task is not the Tokio [`task::Id`], but
 [`span::Id`] of the span which instruments that task. That value is the one that appears in
 brackets after the span name `runtime.spawn` (e.g. `[1]`). This is a bit confusing, because the
 `runtime.spawn` span also has a field called `task.id`, but that one refers to the Tokio task ID.
-The important point here is that our span Ids match (both 1), so this operation is being performed
+The important point here is that our span IDs match (both 1), so this operation is being performed
 from within the task that it is affecting.
 
 [`task::Id`]: https://docs.rs/tokio/1.35.1/tokio/task/struct.Id.html
-[`span::Id`]: https://docs.rs/tracing/0.1.40/tracing/span/struct.Id.html
 
 The operation `wake_by_ref` indicates that the task is being woken using a reference to the waker.
 This operation doesn't consume the waker - which is important when Tokio Console counts the number
@@ -312,8 +318,8 @@ behaviour of [`yield_now()`] to defer the wake. When a task yields to the runtim
 is immediately ready to be polled again (that's the whole point). Any other task which is ready
 will get precedence to be polled first (except under some specific conditions involving the LIFO
 slot). However the scheduler won't necessarily poll the resource drivers, this means that a task
-that is always ready may starve the resource drivers despite doing its best to be a well behaved
-task by yielding to the runtime.
+that is always ready may starve the resource drivers despite doing its best to be well behaved by
+yielding regularly to the runtime.
 
 [`tokio#5223`]: https://github.com/tokio-rs/tokio/pull/5223
 
@@ -321,8 +327,11 @@ The PR changes the behaviour to defer waking tasks which call [`yield_now()`] un
 the resource drivers, avoiding the starvation issue.
 
 After some discussion on [console#512], we decided that it's OK that Tokio Console can't detect
-this specific case of self wakes, since the PR on Tokio made them much less likely to indicate
+this specific case of self wakes, since the PR on Tokio made them much less likely to result in
 some performance issue - something which may still occur from other futures self waking.
+
+And that's how I managed to use my very basic subscriber crate to answer a question quicker thanks
+to pretty colours.
 
 ## should I use `ari-subscriber`?
 
@@ -332,9 +341,11 @@ it?
 The answer is **no**.
 
 Aside from missing a bunch of useful features, `ari-subscriber` currently does a lot of things "the
-easy way", which is not very performant. Unless you too are trying to debug the instrumentation
-built into Tokio, you're much better off using the [`fmt::Subscriber`] from the `tracing-subscriber`
-crate.
+easy way", which is not very performant. I know how to make it more performant, but I promised
+myself I'd write this post before doing any more work on the crate.
+
+Unless you too are trying to debug the instrumentation built into Tokio, you're much better off using
+the [`fmt::Subscriber`] from the `tracing-subscriber` crate.
 
 If you **are** debugging that instrumentation, please [come and say hi](@/about.md#contact)! I'd
 be really interested to hear what you're doing and I might even be able to help.
