@@ -74,8 +74,8 @@ aggregation, send them to another service (maybe via Open Telemetry).
 
 The [`tracing-subscriber`] crate provides a number of subscriber implementations. From the outside,
 this mostly looks like different ways to write traces to a file handle. However, the real heart of
-[`tracing-subscriber`] is the [registry]. The registry is subscriber which implements a span store
-and allows multiple layers to connect to it.
+[`tracing-subscriber`] is the [registry]. The registry is a subscriber which implements a span
+store and allows multiple layers to connect to it.
 
 [`tracing-subscriber`]: https://docs.rs/tracing-subscriber
 [registry]: https://docs.rs/tracing-subscriber/0.3.18/tracing_subscriber/registry/index.html
@@ -156,7 +156,8 @@ tracing_subscriber::registry()
 This will write output to `stdout` (currently not configurable). And the output will have pretty
 colours!
 
-It's look at a simple example of how we can use `ari-subscriber`. Here's the Rust code we'll be using:
+Let's look at a simple example of how we can use `ari-subscriber`. Here's the Rust code we'll be
+using:
 
 ```rust
 #[tokio::main]
@@ -382,4 +383,5 @@ be really interested to hear what you're doing and I might even be able to help.
 
 ### thanks
 
-Thanks to [Luca Palmieri](https://lpalmieri.com/) for feedback on the post!
+Thanks to [Luca Palmieri](https://lpalmieri.com/) and [One](https://github.com/c-git) for feedback
+on the post!
