@@ -206,7 +206,7 @@ First big difference is that there are multiple producers.
 
 (no big surprises there)
 
-They each some some messages to the channel.
+They each send some some messages to the channel.
 
 The channel then delivers those messages to the consumer.
 
