@@ -2,10 +2,12 @@
 resolver = "2"
 
 members = [
-    "resources/logging-1",
-    "resources/track_caller",
-    "resources/understanding-async-await",
+    "resources/debugging-tokio-instrumentation",
+    "resources/queues",
+    "resources/tokio-with-the-console",
+    "resources/tracing-examples",
     "resources/tracing-reload",
     "resources/tracing-tokio-tasks",
-    "resources/debugging-tokio-instrumentation",
+    "resources/track_caller",
+    "resources/understanding-async-await",
 ]
