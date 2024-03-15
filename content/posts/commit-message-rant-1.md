@@ -108,7 +108,7 @@ Linking to a ticket (issue) is a good idea. But also mention other tickets relat
 Let's looks at an example.
 
 ```COMMIT_EDITMSG
-TSERV-2140: Add Envoy
+BLAH-2140: Use least request balancing
 ```
 
 We have a ticket number, so maybe there's some useful information there. Oh, too late, the ticketing system was migrated 3 years ago, we didn't keep old tickets.
@@ -116,25 +116,41 @@ We have a ticket number, so maybe there's some useful information there. Oh, too
 Wouldn't it be better if we had a bit more **context**?
 
 ```COMMIT_EDITMSG
-TSERV-2140: Add TCS load balancing with Envoy
- 
-Use Envoy proxy (https://www.envoyproxy.io/) in a container sidecar to
-perform client side load balancing of gRPC requests from Trasa to the
-deployed Traffic Cache Service (currently Zamyn).
- 
-In order to support high availability (99.9% SLA), we require replicas
-of both the traffic cache service pods as well as the front-end trasa
-pods.
- 
-Load balancing gRPC connections from the trasa pods to the TCS pods
-isn't something that is supported natively by Kubernetes (see
-investigation in TSERV-2138), so we require another solution.
- 
-This change adds an additional container to the Trasa pods containing
-Envoy proxy. Envoy handles service discovery via the Kubernetes service
-DNS record as well as request level load balancing of HTTP/2 (which lies
-underneath gRPC). The Trasa container now connects to the Envoy
-container (via the pod-internal localhost interface) and Envoy connects
-to all the traffic cache service pods.
+BLAH-2140: Use least request balancing in Envoy
+
+We had reports of latency spikes from some customers (BLAH-2138). The
+investigation led to us noticing that the Info Cache Service (ICS) pods
+did not appear to be equally loaded.
+
+As our front-end pods communicate with the ICS pods via gRPC, we perform
+client side load balancing using Envoy Proxy
+(https://www.envoyproxy.io/) as native Kubernetes load balancing doesn't
+support HTTP/2 (see investigation in BLAH-1971).
+
+Since our incoming requests often require significantly different
+processing time on the ICS pods, the round robin load balancer in
+Envoy was overloading some pods. The documentation suggests that in
+this case, using the least request strategy is a better fit:
+https://www.envoyproxy.io/docs/envoy/v1.15.5/intro/arch_overview/upstream/load_balancing/load_balancers
+
+The experimental testing we performed confirmed this configuration.
+The results are available at:
+https://wiki.in.example.com/team/ics/load-balancer-comparison/
+
+This change switches the load balancing strategy used in Envoy sidecar
+container (in the trasa pods) to use weighted least request.
 ```
 
+First, we make our summary a little more descriptive. We're using Envoy for load balancing, let's have that right up there.
+
+Then we start with the reason why we're making any change at all, we've had bug reports and we found a problem. Following is a bit of history. This will save anyone who is reading the commit message having to go hunting down the reason we're even using Envoy. Note that when we say that we're using some software, we link to the web-site. This isn't a lot of work and provides clarity in case some other Envoy software exists in 3 years time.
+
+Now we describe the approach chosen. We link the documentation that we read as justification for our change - and we link to the version we're using and not `latest`! We follow this by explicitly stating that experimental testing was performed (this removes the doubt in the reader's mind that this change was shipped to be tested in production) and we link to our internal wiki for that.
+
+At the end, we describe what has been changed. This paragraph is short here, because the change itself is only one line, if your change is more complex, you may want to spend more time summarising it.
+
+While this may look like a large description for what is ultimately a small change, the effort involved in deciding on the change was significant. And that's the key, the metric for deciding upon how descriptive a commit message should be is **the time taken to come to the right solution, not the number of lines changed**.
+
+### conclusion
+
+...
