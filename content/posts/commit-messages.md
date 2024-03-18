@@ -2,15 +2,14 @@
 title = "commit message rant (part 1 of n)"
 slug = "commit-messages"
 author = "hds"
-date = "2024-03-20"
-draft = true
+date = "2024-03-18"
 +++
 
 The other day I was setting up release automation for a Rust project. Everything was going great and I'm happy with the release tooling I'm trying out. Then it got to creating the release PR. This looks great, it includes all the information about the release. The version that's being released, a changelog (which is customizable), as well as a link to the commits in the latest version. Here's an example from a [test project](https://github.com/hds/hds_test0):
 
 ![Screenshot of a GitHub Pull Request description. It specifies that the crate `hds_test0` will go from version 0.0.3 to 0.0.4 and provides a list of changes of which there are 2.](/img/commit-message-rant-1/hds_test0-v0.0.4-release-pr.png)
 
-Fantastic, all the information that I need in one place. A summary of the changes that have gone into that release as well as the version number that these changes will be released with. Then I go to the subsequent commit message and it looks like this:
+Fantastic, all the information that I need in one place. A summary of the changes that have gone into the release as well as the version number that these changes will be released with. Then I go to the subsequent commit message and it looks like this:
 
 ```COMMIT_EDITMSG
 chore: release (#6)
@@ -19,15 +18,15 @@ Signed-off-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.g
 Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
 ```
 
-All that wonderful information, all that rich context, gone! Blown away onto the wind. Or rather, trapped in a dark room with a door that only sort of works.
+All that wonderful information, all that rich context, gone! Blown away onto the wind. Or rather, trapped in a dark room with a door that only sort of works (see [but it's already somewhere else](#but-it-s-already-somewhere-else) and [the tooling is fighting you](#the-tooling-is-fighting-you)).
 
-Now's the part where I have to apologise to [Marco Ieni](https://www.marcoieni.com/), the author of the fantastic [release-plz](https://release-plz.ieni.dev/) project. I don't want to take aim at Marco specifically, it was just that this experience perfectly highlighted the general trend to not include important information in commit messages.
+Now is the part where I have to apologise to [Marco Ieni](https://www.marcoieni.com/), the author of the fantastic [release-plz](https://release-plz.ieni.dev/) project. I don't want to take aim at Marco specifically, it was just that this experience perfectly highlighted the general trend to not include important information in commit messages.
 
 > Note to self: open an issue on release-plz to include more detailed information in the commit message.
 
 ### rant
 
-This is a long coming rant, which may be the first of various, but be warned that it is a bit, ... ranty. Don't say I didn't warn you.
+This rant is a long time coming, and it may be the first of many, but it might be a bit, ... ranty. Don't say I didn't warn you.
 
 These days, I would wager that a very large percentage of the readers of this site use [Git](https://git-scm.com/), for better or worse it has become ubiquitous in much of the industry and perhaps even more so in the open source world. I'm going to use Git as an example throughout this post, but everything I say applies to every other source code management / version control system that is worth using. I'd even go so far as to say that any system that doesn't allow the sort of access to commit messages that I'll describe is actively working against your best interests.
 
@@ -45,7 +44,7 @@ Sorry! This is a Rust blog:
 Fix unwrap panic
 ```
 
-You may laugh and say no one ever does this. But I did a search on a private GitLab instance I have access to and found 2.5K commits where the message was some variation of this with no more information! Interestingly I found a few results for "panic" as well, but the results were a little more varied (some of them were related to aborting on panic and many more related to terraform). Still, very few had any actual commit message. Part of the fault of this is GitLab itself, but we'll go into that later.
+You may laugh and say no one ever does this. But I ran a search on a private GitLab instance I have access to and found 2.5K commits where the message was some variation of this with no more information! Interestingly I found a few results for "panic" as well, but the results were a little more varied (some of them were related to aborting on panic and many more related to terraform). Still, very few had any actual commit message. Part of the fault of this is GitLab itself, but we'll go into that later ([the tooling is fighting you](#the-tooling-is-fighting-you)).
 
 This isn't very useful, I could probably work out for myself that a ~~`NullPointerException`~~ panic was being fixed from the code. What is interesting is why this change was needed. What are the assumptions which were previously made, but have now been discovered to be incorrect? This is the information that will be useful both for the code review, but also later on once everyone has forgotten.
 
@@ -55,7 +54,7 @@ In one word: **context**.
 
 This topic was covered wonderfully by [Derek Prior](https://www.prioritized.net/contact/) (the principal engineering manager at GitHub, not the fantasy book author by the same name) in his 2015 RailsConf talk [Implementing a Strong Code-Review Culture](https://www.youtube.com/watch?v=PJjmw9TRB7s). If you haven't seen that talk, it is well worth watching.
 
-To summarise, a commit message should contain the **why** and the **what**. Why was a change necessary? Why was it implemented the way it was? Why were the tools used chosen? What was changed? What benefits and and down-sides does the implementation have? What was left out of this particular change? (and why?)
+To summarise, a commit message should contain the **why** and the **what**. **Why** was a change necessary? **Why** was it implemented the way it was? **Why** were those tools used chosen? **What** was changed? **What** benefits and and down-sides does the implementation have? **What** was left out of this particular change? (and why?)
 
 If you're the sort of person who writes a single line summary and leaves it at that (we've all been that person), start by making yourself write two paragraphs in the body of the commit message for every commit. (1) Why was this change made. (2) What does this change do.
 
@@ -75,19 +74,22 @@ The first is persistence. As mentioned above, commit history is a distributed st
 
 Your ticketing system does not have these properties. [GitHub](https://github.com/) (or [GitLab](https://gitlab.com) or [Codeberg](https://codeberg.org/)) does not have these properties.
 
-I've seen JIRA projects get deleted for all sorts of reasons. It's confusing keeping this old project around, people will create tickets for us there, let's just delete it. We're migrating to a new instance with a simpler configuration, migrating all the tickets is too complex, it's better to start afresh. JIRA is too complex, we're moving to a simpler solution that covers all our needs, no, we can't import our closed tickets.
+I've seen JIRA projects get deleted for all sorts of reasons.
+* _"It's confusing keeping this old project around, people will create tickets for us there, let's just delete it."_
+* _"We're migrating to a new instance with a simpler configuration, migrating all the tickets is too complex, it's better to start afresh."_
+* _"JIRA is too complex, we're moving to a simpler solution that covers all our needs, no, we can't import our closed tickets."_
 
-GitHub has been a staple of open source development for a decade and a half now. But many open source projects have lived much longer than that. GitHub won't be around for ever, and when it comes time to migrate to whatever solution we find afterwards, pulling all the PR and Issue descriptions out of the API is likely to be something that many people simply don't have time for. 
+GitHub has been a staple of open source development for a decade and a half now. But many open source projects have lived much longer than that. GitHub won't be around for ever, and when it comes time to migrate to whatever solution we find afterwards, pulling all the PR and Issue descriptions out of the API is likely to be something that many maintainers simply don't have time for. 
 
-I challenge you to find a semi-mature engineering team that will accept migrating to a new version control system that doesn't allow them to import their history from Git.
+I challenge you to find a semi-mature engineering team that will accept migrating to a new version control system that doesn't allow them to import their history from Git/Mecurial/SVN/...
 
-Keeping that valuable information behind someone else's API when you could have it on everyone's dev box seems crazy.
+Keeping that valuable information behind someone else's API when you could have it on everyone's development machine seems crazy.
 
-The second reason is cognitive. There is no person in the history of time and the universe who understands a change better than the you who just finished writing it and runs `git commit`. So this is the person who should describe the changes made. Not the Product Owner who wrote the user story, not the Principal Engineer who developed the overall architecture, you the developer who just finished writing the code itself.
+The second reason is cognitive. There is no person in the history of time and the universe who understands a change better than the you who just finished writing it and runs `git commit`. So this is the person who should describe the changes made. Not the Product Owner who wrote the user story, not the Principal Engineer who developed the overall architecture, you the developer who just finished writing the code itself. And it's probably all right at the front of your head as well, ready to be spilled out into your text editor.
 
 If you amend your commit as you work, then you can amend the message as well, keeping it up to date with the changes in that commit. If you prefer to develop in separate commits, then ensure that each commit contains a full picture of the code up until that point. You don't want to be scratching your head trying to remember why you picked one of three different patterns for that one bit of logic you wrote last week.
 
-A Pull Request description has many of these benefits as well, but it lacks the persistence and accessibility as mentioned above.
+A Pull Request description has many of these benefits, but it lacks the persistence and accessibility as mentioned above.
 
 ### the tooling is fighting you
 
@@ -143,14 +145,24 @@ container (in the trasa pods) to use weighted least request.
 
 First, we make our summary a little more descriptive. We're using Envoy for load balancing, let's have that right up there.
 
-Then we start with the reason why we're making any change at all, we've had bug reports and we found a problem. Following is a bit of history. This will save anyone who is reading the commit message having to go hunting down the reason we're even using Envoy. Note that when we say that we're using some software, we link to the web-site. This isn't a lot of work and provides clarity in case some other Envoy software exists in 3 years time.
+Then we start with the reason why we're making any change at all, we've had bug reports and we found a problem. Following that, we have a bit of history. This will save anyone who is reading the commit message having to go hunting down the reason we're even using Envoy. Note that when we say that we're using some software, we link to the web-site. This isn't a lot of work and provides clarity in case some other Envoy software exists in 3 years time.
 
 Now we describe the approach chosen. We link the documentation that we read as justification for our change - and we link to the version we're using and not `latest`! We follow this by explicitly stating that experimental testing was performed (this removes the doubt in the reader's mind that this change was shipped to be tested in production) and we link to our internal wiki for that.
 
-At the end, we describe what has been changed. This paragraph is short here, because the change itself is only one line, if your change is more complex, you may want to spend more time summarising it.
+At the end, we describe what has been changed. This paragraph is short in this case, because the change itself is only one line, if your change is more complex, you may want to spend more time summarising it.
 
 While this may look like a large description for what is ultimately a small change, the effort involved in deciding on the change was significant. And that's the key, the metric for deciding upon how descriptive a commit message should be is **the time taken to come to the right solution, not the number of lines changed**.
 
-### conclusion
+### signing off
 
-...
+Some code review platforms like to add meta information to the commit message. For example, listing the authors of different commits that went into a reviewed change, or the names of the reviewers.
+
+This might be useful, but naming names is the least valuable information (and is usually hiding the fact that the knowledge those named have isn't properly transferred to the commit message itself).
+
+In my mind, the the real reason to call it `git annotate` instead of `git blame` is that the person it wrote a change is the least interesting thing. It's all the context that should be included in a good commit message which is going to annotate your code.
+
+### the end (for now)
+
+Commit messages are an important part of communicating with developers who will work on a code base in the future. They are far more robust that than most other stores of information (tickets, wikis, etc.).
+
+Next time you **don't** write a detailed, useful commit message, think about what those 5 minutes you saved is going to cost someone in the future.
