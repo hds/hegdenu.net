@@ -7,7 +7,7 @@ date = "2024-03-18"
 
 The other day I was setting up release automation for a Rust project. Everything was going great and I'm happy with the release tooling I'm trying out. Then it got to creating the release PR. This looks great, it includes all the information about the release. The version that's being released, a changelog (which is customizable), as well as a link to the commits in the latest version. Here's an example from a [test project](https://github.com/hds/hds_test0):
 
-![Screenshot of a GitHub Pull Request description. It specifies that the crate `hds_test0` will go from version 0.0.3 to 0.0.4 and provides a list of changes of which there are 2.](/img/commit-message-rant-1/hds_test0-v0.0.4-release-pr.png)
+![Screenshot of a GitHub Pull Request description. It specifies that the crate `hds_test0` will go from version 0.0.3 to 0.0.4 and provides a list of changes of which there are 2.](/img/commit-messages/hds_test0-v0.0.4-release-pr.png)
 
 Fantastic, all the information that I need in one place. A summary of the changes that have gone into the release as well as the version number that these changes will be released with. Then I go to the subsequent commit message and it looks like this:
 
@@ -22,7 +22,7 @@ All that wonderful information, all that rich context, gone! Blown away onto the
 
 Now is the part where I have to apologise to [Marco Ieni](https://www.marcoieni.com/), the author of the fantastic [release-plz](https://release-plz.ieni.dev/) project. I don't want to take aim at Marco specifically, it was just that this experience perfectly highlighted the general trend to not include important information in commit messages.
 
-> Note to self: open an issue on release-plz to include more detailed information in the commit message.
+> Note to self: open an issue on release-plz to include more detailed information in the commit message. (done: [#1355](https://github.com/MarcoIeni/release-plz/issues/1355))
 
 ### rant
 
