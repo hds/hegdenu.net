@@ -191,4 +191,97 @@ Now we see that 3 points fall inside the bounding box, the single point that is 
 
 Of course, this is all very nice in theory, but before we start running our full service performance tests, it would be nice to see how our bounding box pre-filter performs compared to the baseline corridor filter. For this we're going to run some benchmarks!
 
-<!-- TODO: Now let's benchmark -->
+## benchmarking with divan
+
+While optimizing our corridor filter we said _"calculating the bounding box for that segment is likely not much more expensive than a distance calculation"_. It's OK to implement something based on your understanding of how expensive the computation is, but afterwards it's best to go back and validate that understanding - you'll often be surprised!
+
+Now that we have our optimized corridor filter, we're going to compare it with the baseline. For this, I'm going to use [Divan](https://github.com/nvzqz/divan). [Criterion](https://github.com/bheisler/criterion.rs) is probably the go-to benchmarking library for Rust, but I wanted to try Divan because I'd heard about it from the creator, [Nikolai Vazquez](https://nikolaivazquez.com/), at [RustLab](https://rustlab.it/past-editions/2023) last year. I won't go into comparing the two options, because I have never used Criterion.
+
+The set up is pretty straight forward and is described in this [blog post](https://nikolaivazquez.com/blog/divan/). Create a file in the `benches` directory of your crate with a very small amount of boilerplate.
+
+```rust
+fn main() {
+    divan::main();
+}
+
+#[divan::bench]
+fn some_benchmark() {
+    // do things here
+}
+```
+
+One thing that I completely missed when I started using Divan is that you also need to update your `Cargo.toml` to include the bench.
+
+```toml
+[[bench]]
+name = "benchmark"
+harness = false
+```
+
+This is apparently also true for Criterion, and it's because the value for `harness` is `true` by default, but actually using Cargo's own bench support [requires nightly](https://doc.rust-lang.org/cargo/commands/cargo-bench.html).
+
+To get a reasonable spread of benchmark results, we set up 4 scenarios. We have corridors of different numbers of points and varying numbers of "locations", each location is made up of various points. For each scenario we consider the number of locations to be filtered and the total number that fall within the corridor.
+- `small_corridor`: 4 point corridor, 13/15 locations match
+- `medium_corridor`: 109 point corridor, 70/221 locations match
+- `long_narrow_corridor_few_total`: 300 point corridor, 34/65 locations match
+- `long_corridor_many_filtered`: 251 point corridor, 251/2547 locations match
+
+I like the way that Divan allows you to organize benchmarks in modules. So for the first scenario, the benchmark file would be organized in the following manner.
+
+```rust
+mod small_corridor {
+    use super::*;
+
+    #[divan::bench]
+    fn baseline(bencher: divan::Bencher) {
+        // bench code
+    }
+
+    #[divan::bench]
+    fn pre_bbox(bencher: divan::Bencher) {
+        // bench code
+    }
+}
+```
+
+And then we'd do the same for the other 3 scenarios. These can all be added to the same bench file, with a single `main` function.
+
+The scenarios with longer corridors take a reasonable amount of time to execute, so the default 100 iterations that Divan uses would take too long. So those were reduced to 10 and 20 respectively. Now, let's look at the results (using release profile of course)!
+
+```
+$ cargo bench --bench corridors --profile=release
+Timer precision: 38 ns
+corridors                           fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ long_corridor_many_filtered_out                │               │               │               │         │
+│  ├─ baseline                      5.77 s        │ 6.86 s        │ 6.303 s       │ 6.257 s       │ 10      │ 10
+│  ╰─ pre_bbox                      46.71 ms      │ 64.12 ms      │ 51.36 ms      │ 52.73 ms      │ 10      │ 10
+├─ long_narrow_corridor_few_total                 │               │               │               │         │
+│  ├─ baseline                      55.87 ms      │ 79.23 ms      │ 65.06 ms      │ 66.95 ms      │ 20      │ 20
+│  ╰─ pre_bbox                      505.6 µs      │ 812.4 µs      │ 612.1 µs      │ 646.2 µs      │ 20      │ 20
+├─ medium_corridor                                │               │               │               │         │
+│  ├─ baseline                      62.62 ms      │ 91.11 ms      │ 73.88 ms      │ 74.38 ms      │ 100     │ 100
+│  ╰─ pre_bbox                      548.9 µs      │ 1.183 ms      │ 689.9 µs      │ 692 µs        │ 100     │ 100
+╰─ small_corridor                                 │               │               │               │         │
+   ├─ baseline                      137.3 µs      │ 282.4 µs      │ 169.3 µs      │ 177.3 µs      │ 100     │ 100
+   ╰─ pre_bbox                      17.07 µs      │ 52.57 µs      │ 21.19 µs      │ 23.22 µs      │ 100     │ 100
+```
+
+The results were better than we had expected. As you can see, we saw a 100x speed up in all cases except the small corridor, but even in that scenario there was a 5x to 8x speed up. This change made the worst case scenarios significantly better and even gave a reasonable improvement in the smallest scenario where optimizations attempts could potentially lead to worse performance. And we know all this because of the benchmarking, instead of just guessing!
+
+Now that we have some confidence in our changes, let's compare them in the same performance tests that we used in the beginning. Note that "old" and "new" have switched sides compared to the first latency graph that I showed.
+
+![A time series graph showing average, p95, p98, and p99 response times. There are two separate sets of lines (executed at different times, with a gap in the middle), the ones on the left are labelled "Pre-filtering with bounding box" and the ones on the right are labelled "Old corridor filtering".](/img/performance-optimization-flamegraph-divan/latency_baseline_vs_pre_bbox.png)
+
+Again, the results are impressive. The same performance test turned huge latency peaks into what looks like a flat line. Now we're good to go to production with confidence (and the right monitoring strategy).
+
+## so it went to production, right?
+
+Well..., no. Or, kind of.
+
+I've skipped over some details that had nothing to do with the performance optimization. Let's fill them in.
+
+This service is made up of two parts, a frontend service (Rust) which deals with HTTP requests from end users and then forwards the request onto a back-end service (C++) which contains the indexed data.
+
+The corridor filtering is done on the backend service, but the front-end service scales much faster (and is cheaper), so it made sense to consider moving this expensive filtering function to the front-end service. Because the filtering was so expensive, it was cheaper for the back-end service to serialize additional elements that were going to be filtered out, rather than doing the filtering there. And that was true, until we optimized the filtering code and saw how much faster it was. At that point we ported the changes back to the original C++ code and left the filtering where it was.
+
+After bringing the optimizations to the filtering code in the back-end service, it became less expensive to filter there than to serialize the additional elements which would be filtered out. In the end the results were good. Latency is down and so are costs, so it's win-win.
