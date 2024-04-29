@@ -2,13 +2,13 @@
 title = "performance optimization with flamegraph and divan"
 slug = "performance-optimization-flamegraph-divan"
 author = "hds"
-date = "2024-04-30"
-draft = true
+date = "2024-04-29"
+draft = false
 +++
 
 Not long ago, I came across a genuine case of code that needed optimising. I was really excited, as it's not every day that you can say this from the outset, and in this particular case, I was pretty sure that there was plenty of room for improvement, but I didn't know where.
 
-<!-- TODO: Insert image of toot -->
+![Toot by me. Text: I have an honest to gods #algorithm in need of optimisation. It represents a very large percentage of CPU time per request on over 50% of requests to this one service. I have real input data to use for testing. I’m going to need to #profile, #benchmark, and run #performance tests across potential optimisations. I am **so** excited! #devLife #optimization.](/img/performance-optimization-flamegraph-divan/toot.png)
 
 ## how did I know?
 
@@ -26,7 +26,7 @@ A polyline is literally multiple lines, stuck together. In our case, we'll set t
 
 ![Five dots connected in a series by four line segments to form a polyline.](/img/performance-optimization-flamegraph-divan/corridor-1-polyline.png)
 
-The radius means that we consider all the space that is `r` meters (because we're sensible and we use the metric system) from any part of the polyline. Visually, this can be shown as circles of radius `r` around each point and then rotated rectangles centered on each line segment. This visualization can be seen in the image below. The corridor is all the area covered by the blue shapes.
+The radius means that we consider all the space that is `r` meters (because we're sensible and we use the metric system) from any part of the polyline. Visually, this can be shown as circles of radius `r` around each point and rotated rectangles centered on each line segment. This visualization can be seen in the image below. The corridor is all the area covered by the blue shapes.
 
 ![Same polyline as the previous image, the radius is shown visually as circles and rectangles in blue around the polyline.](/img/performance-optimization-flamegraph-divan/corridor-2-polyline-with-radius.png)
 
@@ -36,9 +36,9 @@ That's our corridor. The corridor filter is a function that takes a corridor (po
 
 ![The polyline with radius shown with various points plotted around it. The points which fall inside the corridor are red, the points that fall outside are green.](/img/performance-optimization-flamegraph-divan/corridor-3-points-in-out-corridor.png)
 
-The points which fall inside the corridor are colored red, those that fall outside the corridor are colored green. The filter for this corridor would only return the red points.
+The points which fall inside the corridor are colored red, those that fall outside the corridor are colored green. The filter for this corridor would return only the red points.
 
-It is not only for illustration that the points are all close to the corridor. In our case, we select the points to filter for out of an index. The points that we preselect are those in a bounding box around the corridor itself. A bounding box is a straight (not rotated) rectangle drawn around some group of objects, in our case the corridor.
+It is not only for illustration that the points are all close to the corridor. In the service, we select the points to filter for out of an index. The points that we preselect are those in a bounding box around the corridor itself. A bounding box is a straight (not rotated) rectangle drawn around some group of objects, in our case the corridor.
 
 ![The corridor is shown (without the filtered points) with a purple rectangle drawn around it such that the edges of the rectangle and the corridor touch.](/img/performance-optimization-flamegraph-divan/corridor-4-corridor-with-bounding-box.png)
 
@@ -54,28 +54,27 @@ As an experiment, we switched out a corridor request coming to the API for the b
 
 Using a set of requests previously seen in our worst performing region, a performance test was run, scaling up the number of requests. An initial test was run with the corridor filtering active, and then the second test was run with just the bounding boxes - all using the same request pool.
 
-The results are quite clear when viewed as average, p95, p98, and p99 response times. p99 response time means the 99th percentile of response times for some window - if you order all requests by response time and remove the slowest 1% of requests, the p99 response time is the slowest time that is still left.
+The results are quite clear when visualizing the response times (average, p95, p98, and p99). p99 response time means the 99th percentile of response times for some window - if you order all requests by response time and remove the slowest 1% of requests, the p99 response time is the slowest time that is left.
 
 ![A time series graph showing average, p95, p98, and p99 response times. There are two separate sets of lines (executed at different times, with a gap in the middle), the ones on the left are labelled "Corridor filtering" adn the ones on the right are labelled "Only bounding box".](/img/performance-optimization-flamegraph-divan/latency_without_filtering.png)
 
-So by removing the filtering, we reduced even the p99 time below 200 milliseconds, whereas both the p98 and the p99 had grown to over 2 seconds in the previous test. Clearly, the filtering was the most expensive part of serving requests. This sort of performance test can be really valuable to test assumptions on real workloads. We have an internally developed tool for this at work, but there are plenty of other available.
+So by removing the filtering, we reduced even the p99 time below 200 milliseconds, whereas both the p98 and the p99 had grown to over 2 seconds in the previous test. Clearly, the filtering was the most expensive part of serving requests. This sort of performance test can be really valuable to test assumptions on real workloads. We have an internally developed tool for this at work, but there are plenty of alternatives available.
 
 We can't just take the filtering out though, our end users expect the results returned to be only those within the corridor, not the ones in a bounding box around the corridor.
 
-We've definitely got an algorithm that needs optimizing. The next question is whether it can be optimized, and for that we need to look at where its spending time. Let's see how to do that.
+We've definitely got an algorithm that needs optimizing. The next question is whether it can be optimized, and for that we need to look at where it's spending time. Let's see how to do that.
 
 ## flame graphs
 
 Flame Graphs are a visual analysis tool for hierarchical data. As far as I can tell, they were created by [Brendan Gregg](https://www.brendangregg.com/flamegraphs.html), and it is certainly his writing on flame graphs and his tool to convert profiling data into interactive SVG flame graphs that has made them popular.
 
-Flame graphs are most commonly used to visualize CPU profiling data. Where the call stack forms the flames and the width of each section indicates how many samples were recorded in that specific call stack. A flame graph groups all the matching call stacks together, so there is no notion of the series of execution - if you want that, you need a [flame chart](https://www.brendangregg.com/flamegraphs.html#variant) instead.
+Flame graphs are most commonly used to visualize CPU profiling data (although they're used for all sorts of other measures as well). Where the call stack forms the flames and the width of each section indicates how many samples were recorded in that particular call stack. A flame graph groups all the matching call stacks together, so there is no notion of the series of execution - if you want that, you need a [flame chart](https://www.brendangregg.com/flamegraphs.html#variant) instead.
 
 Let's illustrate what we expect to see from a flame graph. Here's some simple Rust code:
 
 ```rust
 fn main() {
     // Some work here in main first
-
     cheap_thing();
     expensive_thing();
 }
@@ -130,13 +129,13 @@ cargo flamegraph
 
 This will generate a flame graph SVG in your current directory
 
-There are plenty of options to modify the sample rate and choose the target you wish to profile. In my case, I had some trouble selecting a unit test from a binary crate and so I ended up moving the code into a separate crate just for the purpose of optimizing it, I then ported the code back. This isn't ideal, but you sometimes end up doing this anyway so that benchmarks can be run (more on that later!).
+There are plenty of options to modify the sample rate and choose the target you wish to profile. In my case, I had some trouble selecting a unit test from a binary crate and so I ended up moving the code into a separate crate just for the purpose of optimizing it, I then ported the code back. This isn't ideal, but you sometimes end up doing this anyway so that benchmarks can be run on new and old code at the same time (more on that later!).
 
 ## profiling the corridor filter
 
 Computers are really fast. And even sampling almost 1000 times a second (`cargo flamegraph` defaults to 997 Hz), we may not get the best picture of where the CPU is spending its time. The easy answer to this is to do it lots of times. We set up our corridor and the points we want to test against, and then execute the filter in a loop. This will give us a more statistically accurate result.
 
-Let's have a look at the result. It's an SVG, so you can render it in a web-site directly (like I'm doing below), but if you open just the SVG in your browser it's interactive! You can click on boxes in the flame graph to zoom to it and make it occupy the full horizontal width. Try it for yourself by clicking on the image below to open the SVG.
+Let's have a look at the result. It's an SVG, so you can render it in a web-site directly (like I'm doing below), but if you open just the SVG in your browser, it's interactive! You can click on boxes in the flame graph to zoom to it and make it occupy the full horizontal width. Try it for yourself by clicking on the image below to open the SVG.
 
 [![A flame graph of the execution. There aren't a lot of details, it appears that most of the time is spent main, with a reasonable part of that time calling from main directly into sin, cos, and asin functions.](/img/performance-optimization-flamegraph-divan/flamegraph-medium_corridor_baseline-inlined.svg)](/img/performance-optimization-flamegraph-divan/flamegraph-medium_corridor_baseline-inlined.svg)
 
@@ -146,7 +145,7 @@ But then it gets weird. From main it looks like we're calling directly into `sin
 
 Inlining! The call stack depends on how our functions have been optimized by the compiler. Because we profile in release mode (with debug symbols), we see optimizations taking place, one of which is inlining.
 
-Inlining is when the compiler takes the contents of a function and rather than keeping it separate and calling into it, inserts it wherever that function is called. For small functions, this often brings a reasonable performance improvement, but it does make performance analysis harder to use.
+Inlining is when the compiler takes the contents of a function and rather than keeping it separate and calling into it, inserts it wherever that function is called. For small functions, this often brings a reasonable performance improvement, but it does make performance analysis harder.
 
 In Rust, you can assert some control over this process with the [`#[inline]` attribute](https://doc.rust-lang.org/stable/reference/attributes/codegen.html#the-inline-attribute). In our case, we want to suggest to the compiler that we would prefer if certain functions were not inlined. For that we do the following:
 
@@ -161,9 +160,9 @@ Let's sprinkle a few of these around and try again. This may make our code slowe
 
 [![A flame graph of the execution. We now see more functions in between main and the trigonometric functions.](/img/performance-optimization-flamegraph-divan/flamegraph-medium_corridor_baseline.svg)](/img/performance-optimization-flamegraph-divan/flamegraph-medium_corridor_baseline.svg)
 
-That's much better, we can now see more of the call stack. Knowing the code, it still looks a bit odd to me, there are call stacks which seem to be missing intermediate functions. I don't know why this is, but it does seem to happen - performance profiling can be much more of an art than a science at times.
+That's much better, we can now see more of the call stack. Knowing the code, it still looks a bit odd to me, there are call stacks which seem to be missing intermediate functions. I don't know why this is, but it does seem to happen - performance profiling can be as much an art as a science at times.
 
-So let's look at what we can tell from the flame graph. Looking from the top, we see that 77% of the total execution time was spent inside `distance_meters`. This is not what I was expecting. That function just implements the [Haversine formula](https://en.wikipedia.org/wiki/Haversine_formula) to calculate the distance between two points. The function does use the trigonometric functions which show up in the flame graph, it seems they are more expensive than we'd thought.
+So let's look at what we can tell from the flame graph. Looking from the top, we see that 77% of the total execution time was spent inside `distance_meters`. This is not what I was expecting. That function "just" implements the [Haversine formula](https://en.wikipedia.org/wiki/Haversine_formula) to calculate the distance between two points. The function does use the trigonometric functions which show up in the flame graph - it seems they are more expensive than we'd thought.
 
 You can see that domain knowledge is important when analyzing the performance of your code (or anyone else's). Often, the biggest challenge is interpreting the results of the performance profiling within the domain you're working in. We'll see this again as we try to optimise this code.
 
@@ -173,7 +172,7 @@ We've found out that measuring the distance between two points is the most expen
 
 My gut feeling had been that this is where the performance bottleneck would be - however from our flame graph, we can see that `distance_to_segment_m` only accounted for 10% of the samples. Take this as a lesson, [humans are bad at guessing about performance](https://github.com/flamegraph-rs/flamegraph/tree/v0.6.5?tab=readme-ov-file#humans-are-terrible-at-guessing-about-performance).
 
-So, what can we do to improve the filter code. When filtering, we have to compare every point (let's say we have `N`) to all of the line segments in the corridor's polyline (let's say we have `M`), so we have `O(NM)` distance calculations. Let's try and reduce that, or at least replace it with something cheaper.
+So, what can we do to improve the filter code. When filtering, we have to compare every point (let's say we have `N`) to all of the line segments in the corridor's polyline (let's say we have `M`), so we have `NM` distance calculations. Let's try and reduce that, or at least replace it with something cheaper.
 
 Something cheaper than a distance calculation is a bounding box check. Checking whether or not a point is in a bounding box requires 4 comparison operations, which is much cheaper than the Haversine formula. Or at least we think it is.
 
@@ -246,7 +245,7 @@ mod small_corridor {
 
 And then we'd do the same for the other 3 scenarios. These can all be added to the same bench file, with a single `main` function.
 
-The scenarios with longer corridors take a reasonable amount of time to execute, so the default 100 iterations that Divan uses would take too long. So those were reduced to 10 and 20 respectively. Now, let's look at the results (using release profile of course)!
+The scenarios with longer corridors take a reasonable amount of time to execute, so the default 100 iterations that Divan uses would take too long. Those were reduced to 10 and 20 iterations respectively. Now, let's look at the results (using release profile of course)!
 
 ```
 $ cargo bench --bench corridors --profile=release
@@ -266,9 +265,9 @@ corridors                           fastest       │ slowest       │ median  
    ╰─ pre_bbox                      17.07 µs      │ 52.57 µs      │ 21.19 µs      │ 23.22 µs      │ 100     │ 100
 ```
 
-The results were better than we had expected. As you can see, we saw a 100x speed up in all cases except the small corridor, but even in that scenario there was a 5x to 8x speed up. This change made the worst case scenarios significantly better and even gave a reasonable improvement in the smallest scenario where optimizations attempts could potentially lead to worse performance. And we know all this because of the benchmarking, instead of just guessing!
+The results were better than we had expected. As you can see, we saw a 100x speed up in all cases except the small corridor, but even in that scenario there was a 5x to 8x speed up. Our optimization made the worst case scenarios significantly better and even gave a reasonable improvement in the smallest scenario where optimizations attempts could potentially lead to worse performance. And we know all this because of the benchmarking, instead of just guessing!
 
-Now that we have some confidence in our changes, let's compare them in the same performance tests that we used in the beginning. Note that "old" and "new" have switched sides compared to the first latency graph that I showed.
+Now that we have some confidence in our changes, let's compare them in the same performance tests that we used at the beginning. Note that "old" and "new" have switched sides compared to the first latency graph that I showed.
 
 ![A time series graph showing average, p95, p98, and p99 response times. There are two separate sets of lines (executed at different times, with a gap in the middle), the ones on the left are labelled "Pre-filtering with bounding box" and the ones on the right are labelled "Old corridor filtering".](/img/performance-optimization-flamegraph-divan/latency_baseline_vs_pre_bbox.png)
 
@@ -285,3 +284,13 @@ This service is made up of two parts, a frontend service (Rust) which deals with
 The corridor filtering is done on the backend service, but the front-end service scales much faster (and is cheaper), so it made sense to consider moving this expensive filtering function to the front-end service. Because the filtering was so expensive, it was cheaper for the back-end service to serialize additional elements that were going to be filtered out, rather than doing the filtering there. And that was true, until we optimized the filtering code and saw how much faster it was. At that point we ported the changes back to the original C++ code and left the filtering where it was.
 
 After bringing the optimizations to the filtering code in the back-end service, it became less expensive to filter there than to serialize the additional elements which would be filtered out. In the end the results were good. Latency is down and so are costs, so it's win-win.
+
+## final words
+
+If I was reading this post without any prior knowledge, I think I'd feel a little disappointed. It all seemed like a lot of extra work for something that turned out to be easy. After all, our first optimization attempt resulted in a 100x speed up and then we stopped there.
+
+However, my experience is that this is often the case. The trick here was a combination of profiling and domain knowledge driven intuition. My initial assumption about where to optimize was incorrect, but I never tried implementing that because the profiling results pointed me in another direction.
+
+But once I had the direction, I could apply my own domain experience to the problem and guess at a solution. The benchmarking quickly showed me that the first guess did provide a reduction in execution time. In this write up I skipped the bit where we started benchmarking before we had all the functional test cases passing - because if it wasn't faster, we weren't going to bother fixing edge cases.
+
+As I said earlier, performance optimization is sometimes as much an art as a science, but you need both parts to be effective.
