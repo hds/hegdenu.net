@@ -279,11 +279,13 @@ Well..., no. Or, kind of.
 
 I've skipped over some details that had nothing to do with the performance optimization. Let's fill them in.
 
-This service is made up of two parts, a frontend service (Rust) which deals with HTTP requests from end users and then forwards the request onto a back-end service (C++) which contains the indexed data.
+This service is made up of two parts, a front-end service (Rust) which deals with HTTP requests from end users and then forwards the request onto a back-end service (C++) which contains the indexed data.
 
-The corridor filtering is done on the backend service, but the front-end service scales much faster (and is cheaper), so it made sense to consider moving this expensive filtering function to the front-end service. Because the filtering was so expensive, it was cheaper for the back-end service to serialize additional elements that were going to be filtered out, rather than doing the filtering there. And that was true, until we optimized the filtering code and saw how much faster it was. At that point we ported the changes back to the original C++ code and left the filtering where it was.
+The corridor filtering is performed on the back-end service, the one with the index data. But the back-end service scales slowly, whereas the front-end service scales much faster (shorter pod start-up time) and is cheaper. So it made sense to consider moving the expensive filtering function to the front-end service.  Because the filtering was so expensive, it was cheaper for the back-end service to serialize additional elements that were going to be filtered out, rather than doing the filtering itself. We could instead filter on the cheaper front-end service.
 
-After bringing the optimizations to the filtering code in the back-end service, it became less expensive to filter there than to serialize the additional elements which would be filtered out. In the end the results were good. Latency is down and so are costs, so it's win-win.
+And that was true, until we optimized the filtering code and saw how much faster it became. At that point we ported the changes back to the original C++ code and left the filtering where it was in the back-end service.
+
+After porting the filtering optimizations to the back-end service, it became less expensive to filter than to serialize the additional elements which would be filtered out. In the end the results were good. Latency is down and so are costs, so it's win-win.
 
 ## final words
 
