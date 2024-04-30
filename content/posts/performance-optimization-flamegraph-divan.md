@@ -109,7 +109,7 @@ Of course, real flame charts aren't usually so neat. Amongst other things, `main
 
 If we were optimizing this code, we can see that we probably want to start with `expensive_thing` and the 2 functions it calls.
 
-## flamegraphs in rust
+## flamegraph in rust
 
 When I first used flame graphs it was from C++. This usually involved a multistep process where you have to set up a specific (release like) build, profile it with [`perf`](https://perf.wiki.kernel.org/index.php/Main_Page), and then convert it to a flame graph SVG with Brendan Gregg's [`flamegraph.pl`](https://github.com/brendangregg/FlameGraph/blob/master/flamegraph.pl) (yes, a Perl script).
 
@@ -127,7 +127,14 @@ Once it's done, we can run it like any other cargo command.
 cargo flamegraph
 ```
 
-This will generate a flame graph SVG in your current directory
+This will generate a flame graph SVG in your current directory.
+
+To make the graphs more useful, set the following in your `Cargo.toml` so that your release profile gets debug symbols.
+
+```toml
+[profile.release]
+debug = true
+```
 
 There are plenty of options to modify the sample rate and choose the target you wish to profile. In my case, I had some trouble selecting a unit test from a binary crate and so I ended up moving the code into a separate crate just for the purpose of optimizing it, I then ported the code back. This isn't ideal, but you sometimes end up doing this anyway so that benchmarks can be run on new and old code at the same time (more on that later!).
 
