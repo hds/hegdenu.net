@@ -215,24 +215,129 @@ The final line is the task returning `Poll::Pending` and moving into an idle sta
 Now, let's look at what is happening with the channel's senders.
 
 ```rust
-tokio::time::sleep(Duration::from_millis(10)).await;
-let task_tx = tx.clone();
-spawn_named("sender-task", async move {
-    tracing::debug!("wake from another task (async)");
-    task_tx.send(()).await.unwrap();
-})
-.await
-.unwrap();
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    let task_tx = tx.clone();
+    spawn_named("sender-task", async move {
+        tracing::debug!("wake from another task (async)");
+        task_tx.send(()).await.unwrap();
+    })
+    .await
+    .unwrap();
 ```
 
 Here we use a bit of a hack, we wait for 10 milliseconds, this is to make sure that the the following doesn't get executed until after the self wake has occurred. This is likely not necessary, but worth adding to ensure repeatability in a learning context.
 
+In this code, we are spawning a new task (which will immediately be scheduled to run). Inside the task, we emit a DEBUG tracing event and then send a message consisting of the unit struct `()` through the channel.
+
 Here are the traces that correspond to this part of the code:
+
+<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230208Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>  <b><u><span style='color:#5aba84'>new</span></u></b>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230298Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230346Z</span> <span style='color:#5c8dce'>DEBUG</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>
+     <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_spawn_wake</span></b>: <span style='color:#aaa'>wake from another task (async)</span>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230766Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>
+     <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.wake&quot;, task.id=2251799813685250</span>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230824Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230870Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230914Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230956Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>  <b><u><span style='color:#5aba84'>close</span></u></b>
+</code></pre>
+
+This section contains 8 traces, let's walk through them all in turn:
+
+1. `new` - the `sender-task` task is created. It as Tokio Task ID `4` and the `runtime.spawn` span representing that task has span ID `2251799813685251`.
+2. `enter` - the task is polled for the first time.
+3. `tokio_spawn_wake` - the DEBUG event that we emitted from our code with `tracing::debug`.
+4. `tokio::task::waker` - here is our waker operation, `waker.wake`. The `task.id` in this event is `2251799813685250`. Remember, this is the span ID of the `runtime.spawn` span representing a task. It isn't the same as the parent span, so we know we're waking some **other** task, if you check back up you'll see that it is indeed the receiver task that's being woken.
+5. `exit` - the task exits. It's not clear from this trace, but the task has returned `Poll::Ready` and won't be polled again.
+6. `enter` - the task span is entered again (see 8.)
+7. `exit` - the task span is exited again (see 8.)
+8. `close` - the task has been dropped. The task has now been destroyed and won't be polled again. The `enter` and `exit` in traces 6. and 7. don't actually indicate that the task gets polled an additional time. Tokio enters the span one last time to drop the task, which results in these extra steps.
+
+Note that in trace 4. the operation is `waker.wake`, whereas in the self wake case the operation was `waker.wake_by_ref`. This is because the channel owns a waker. The channel's waker was cloned when the receiver task called `rx.recv().await` and will now be consumed! In the case of self waking, we didn't need to clone the waker as we were within the same task and could access it by reference.
+
+We can tell that there was capacity in the channel to send our message, because otherwise the sender task would have exited and then entered again before being able to wake the receiver task. And of course it would have had to clone the waker so that it could be woken when capacity in the channel was available. But there was capacity, so none of this happened.
+
+Another difference with the self wake case (perhaps **the** difference) is that in the `tokio::task::waker` event, the value of the `task.id` field is different to the span ID of the event's parent span (which represents the task which the wake operation occurred within). This is how we know that the receiver task was woken by some other task. It would be interesting to analyse the causality graph along the lines of waker operations.
+
+Here's the trace with the two values highlighted in red:
+
+<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.230766Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#df5853'>2251799813685251</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender-task, task.id=4}</span>
+     <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.wake&quot;, task.id=<b><span style='color:#df5853'>2251799813685250</span></b></span>
+</code></pre>
+
+## wake from outside the runtime
+
+Finally, let's take a look at some code that's going to wake our receiver task from outside the runtime. We spawn a new thread and then immediately sleep:
+
+```rust
+    let no_runtime_tx = tx.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(10));
+
+        // Things done in the thread
+    })
+    .join()
+    .unwrap();
+```
+
+
+We wait for 10 milliseconds again. Like before, the sleep is a hack to make sure that the receiver task has absolutely, positively consumed the message that was in the channel and has already awaited on receiving a new message.
+
+Let's check the instrumentation to see that this is indeed happening:
+
+<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.231009Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.231090Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>
+     <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.clone&quot;, task.id=2251799813685250</span>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.231143Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
+</code></pre>
+
+And it is! We can see that our receiver task enters (gets polled) and consumes the message from the channel (we don't see this, but we know it happens). The receiver task then clones its own waker (because the waker event `task.id` and the parent `runtime.spawn` span ID match) which means that it's awaiting receiving from the channel. Finally, the task exits, so it must have returned `Poll::Pending` as expected.
+
+Now on to waking from outside the runtime.
+
+```rust
+    let no_runtime_tx = tx.clone();
+    std::thread::spawn(move || {
+        // That hacky sleep code
+
+        tracing::debug!("wake from another thread (non-async)");
+        no_runtime_tx.try_send(()).unwrap();
+    })
+    .join()
+    .unwrap();
+```
+
+From our new thread, we emit a DEBUG tracing event and then send a message through the channel. Because we're not in an async context, we need to use the non-async `try_send` method on the channel's sender. We ensured that capacity would be available by sleeping for a little bit earlier, so we just unwrap the result like some uncouth villain.
+
+Let's check the instrumentation from this episode:
+
+<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.241340Z</span> <span style='color:#5c8dce'>DEBUG</span>
+   <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_spawn_wake</span></b>: <span style='color:#aaa'>wake from another thread (non-async)</span>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-18</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>10:45:11</span></b></span><span style='opacity:0.67'>.241403Z</span> <span style='color:#9d4edd'>TRACE</span>
+   <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.wake&quot;, task.id=2251799813685250</span>
+</code></pre>
+
+This only consists of 2 traces. Standard library threads aren't instrumented, so we don't see anything about spawn the thread or starting execution in it until we get to the DEBUG tracing event that we emitted from our code. Then we see the `tokio::task::waker` event. We can see that the `task.id` field corresponds to the span ID for the receiver task `2251799813685250`, but that this event doesn't have a `runtime.spawn` parent span. In fact, it doesn't have a parent span at all (we call this a root event).
+
+This tells us that the task was woken from outside the async runtime, which can be useful information in and of itself.
+
+## finishing up
 
 <pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom">
 </code></pre>
-
-Then we create a new task called `"sender-task"` and give it a clone of the channel's `Sender`.
 
 ## spawn named implementation
 
