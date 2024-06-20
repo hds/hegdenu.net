@@ -12,7 +12,7 @@ In async Rust, when the future driving a task returns [`Poll::Pending`](https://
 
 ## wake-up code
 
-Let's start with some Rust code which we're going to analyse via the tracing instrumentation in tokio.
+Let's start with some Rust code which we're going to analyse via the tracing instrumentation in tokio. Don't worry if this looks like a lot of code, we're going to go through it step by step.
 
 ```rust
 #[tokio::main]
@@ -301,6 +301,24 @@ Here's the trace with the two values highlighted in red:
      <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.wake&quot;, task.id=<b><span style='color:#df5853'>2251799813685250</span></b></span>
 </code></pre>
 
+### receiving the first message
+
+We now expect the receiver task to get woken and receive that message. Let's check the instrumentation to see that this is indeed happening:
+
+<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.509039Z</span> <span style='color:#9d4edd'>TRACE</span> 
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.509132Z</span> <span style='color:#5c8dce'>DEBUG</span> 
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span> 
+     <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_spawn_wake</span></b>: <span style='color:#aaa'>received message</span>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.509187Z</span> <span style='color:#9d4edd'>TRACE</span> 
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span> 
+     <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.clone&quot;, task.id=2251799813685250</span>
+<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.509253Z</span> <span style='color:#9d4edd'>TRACE</span> 
+   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
+</code></pre>
+
+And it is! We can see that our receiver task enters (gets polled) and consumes the message from the channel, which we can see from the DEBUG message we emitted. The receiver task then clones its own waker (because the waker event `task.id` and the parent `runtime.spawn` span ID match) which means that it's awaiting receiving from the channel. Finally, the task exits, so it must have returned `Poll::Pending` as expected.
+
 ## wake from outside the runtime
 
 Finally, let's take a look at some code that's going to wake our receiver task from outside the runtime. We spawn a new thread and then immediately sleep:
@@ -317,23 +335,7 @@ Finally, let's take a look at some code that's going to wake our receiver task f
 ```
 
 
-We wait for 10 milliseconds again. Like before, the sleep is a hack to make sure that the receiver task has absolutely, positively consumed the message that was in the channel and has already awaited on receiving a new message.
-
-Let's check the instrumentation to see that this is indeed happening:
-
-<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.509039Z</span> <span style='color:#9d4edd'>TRACE</span> 
-   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
-<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.509132Z</span> <span style='color:#5c8dce'>DEBUG</span> 
-   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span> 
-     <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_spawn_wake</span></b>: <span style='color:#aaa'>received message</span>
-<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.509187Z</span> <span style='color:#9d4edd'>TRACE</span> 
-   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span> 
-     <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.clone&quot;, task.id=2251799813685250</span>
-<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.509253Z</span> <span style='color:#9d4edd'>TRACE</span> 
-   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
-</code></pre>
-
-And it is! We can see that our receiver task enters (gets polled) and consumes the message from the channel, which we can see from the DEBUG message we emitted. The receiver task then clones its own waker (because the waker event `task.id` and the parent `runtime.spawn` span ID match) which means that it's awaiting receiving from the channel. Finally, the task exits, so it must have returned `Poll::Pending` as expected.
+We wait for 10 milliseconds again. Like before, the sleep is a hack to make sure that the receiver task has absolutely, positively consumed the message that was in the channel and has already awaited on receiving a new message. We just saw in the previous section that this has happened, so let's move on.
 
 Now on to waking from outside the runtime.
 
@@ -363,25 +365,35 @@ This only consists of 2 traces. Standard library threads aren't instrumented, so
 
 This tells us that the task was woken from outside the async runtime, which can be useful information in and of itself.
 
-## finishing up
+### receiving the second message
 
-That's the extent of the waker traces emitted from our program, but let's round things up by running through the last few lines of code and the traces that are produced. We're left with two lines of code:
-
-```rust
-    drop(tx);
-    receiver_jh.await.unwrap();
-```
-
-Here we drop the channel sender that was held in the main task (it was never actually used, just cloned into the async task and the thread). This is the last sender, so this will cause the receiver task to exit the `while` loop it is in. Then, we await the receiver task's join handle to make sure that it has exited and then we're done.
-
-Let's look at the last of the traces:
+Once again, we expect the receiver task to get have been woken, get polled, and this time receive the message that wasn't there last time it was polled. That's exactly what the traces show:
 
 <pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.519695Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.519788Z</span> <span style='color:#5c8dce'>DEBUG</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span> 
      <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_spawn_wake</span></b>: <span style='color:#aaa'>received message</span>
-<span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.519839Z</span> <span style='color:#5c8dce'>DEBUG</span> 
+</code></pre>
+
+The first trace shows the receiver task becoming active and the second trace comes from the DEBUG tracing event that we emit from the code after receiving a message. This fits with what we were expecting.
+
+We're going to stop here, before the receiver task goes any further (but it is still active, as we haven't reached an `exit` span event yet).
+
+## finishing up
+
+Let's round things up by running through the last few lines of code and the traces that are produced. We're left with two lines of code:
+
+```rust
+    drop(tx);
+    receiver_jh.await.unwrap();
+```
+
+Here we drop the channel sender that was held in the main task (it was never actually used, just cloned into the async task and the thread). This is the last sender, so this will cause the receiver task to exit the `while` loop it is in. Then, we await the receiver task's join handle to make sure that it has completed and we're done.
+
+Remember that we were in the middle of polling the receiver task here. Let's look at the last of the traces:
+
+<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.519839Z</span> <span style='color:#5c8dce'>DEBUG</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span> 
      <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_spawn_wake</span></b>: <span style='color:#aaa'>received None</span>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.519907Z</span> <span style='color:#9d4edd'>TRACE</span> 
@@ -394,17 +406,31 @@ Let's look at the last of the traces:
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>2251799813685250</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>close</span></u></b>
 </code></pre>
 
-We've got 7 traces here, so we'll go through them one by one:
+We've got 5 traces here, so we'll go through them one by one:
 
-1. `enter` - the receiver task gets polled (woken by the other thread).
-2. `tokio_spawn_wake` - the receiver task receives a message from the channel
-3. `tokio_spawn_wake` - the receiver task receives `None` from the channel, indicating that all the senders have been dropped and the channel is closed
-4. `exit` - the receiver task exits.
-5. `enter` - the receiver task's `runtime.spawn` span enters (that funny enter-exit at the end that isn't really a poll)
-6. `exit` - the receiver task's `runtime.spawn` span exits (that funny enter-exit at the end that isn't really a poll)
-7. `close` - the receiver task is dropped
+1. `tokio_spawn_wake` - the receiver task receives `None` from the channel, indicating that all the senders have been dropped and the channel is closed
+2. `exit` - the receiver task exits, this matches where the span entered at the end of the previous section.
+3. `enter` - the receiver task's `runtime.spawn` span enters (that funny enter-exit as a task is dropped that isn't really a poll)
+4. `exit` - the receiver task's `runtime.spawn` span exits (that funny enter-exit as a task is dropped that isn't really a poll)
+5. `close` - the receiver task is dropped
 
-We can see here that the last sender gets dropped before the receiver task has finished receiving the previous message and looped back around to call `recv().await` again. Since the channel has closed by this point, the receiver task gets the notification straight away (no returning `Poll::Pending`). There's no cloning of the waker or exiting.
+We can see here that the last sender gets dropped before the receiver task has finished receiving the previous message and looped back around to call `recv().await` again. Since the channel has closed by this point, the receiver task gets the notification straight away. There's no cloning of the waker or returning `Poll::Pending`.
+
+### lies by omission
+
+There's one small point that we've skirted around and that conveniently didn't show up in the traces. If we had added a final tracing event at the end of our main function, the trace would like like this:
+
+<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom"><span style='opacity:0.67'><b><span style='color:#aaa'>2024-06-20</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:10:05</span></b></span><span style='opacity:0.67'>.520107Z</span> <span style='color:#5c8dce'>DEBUG</span> 
+   <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_spawn_wake</span></b>: <span style='color:#aaa'>good-bye</span>
+</code></pre>
+
+At first, this might seem just fine. But then we remember, isn't our **async** main function not also a task?
+
+And the answer is yes, it is. And that task also has a span (although it has `kind=block_on`). So why doesn't it show up? Basically it's because when we started our tracing subscriber (the [`Registry`](https://docs.rs/tracing-subscriber/0.3.18/tracing_subscriber/registry/struct.Registry.html) from the `tracing-subscriber` crate with our `ari-subscriber` layer attached), this task had already been created and so had the `runtime.spawn` span that represents it. Tracing subscribers will only "see" spans that are created after they are initialized, previous spans will be lost. Even if they would still be alive and even active later on, those spans won't be received by the subscriber.
+
+We actually do this on purpose. When Tokio starts up with the multi-threaded runtime, it creates a pool of threads to run blocking tasks on. The functionality that runs these threads is actually itself a blocking task (very meta, I know) and so you will see a bunch of blocking task `runtime.spawn` spans created and entered at the beginning of the execution, which is a lot of noise for filter out for an example. It's usually best to skip it completely.
+
+If you do want to capture all the instrumentation from when a runtime starts up, then you need to initialize your tracing subscriber first, and then create and enter a runtime "manually" (without the `#[tokio::main]` attribute). You can see an example of this in the `console-subscriber` example [`local`](https://github.com/tokio-rs/console/blob/0c28c9c04e780d83a93396126322f498f622f207/console-subscriber/examples/local.rs#L14).
 
 This is the end of the main part of the post. Below you'll find the implementation of the functions `spawn_named()` and `self_wake()` that were used within the example code.
 
