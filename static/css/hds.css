@@ -2,44 +2,44 @@
 
 html,
 body {
-	height: 100%;
+    height: 100%;
 }
 
 body {
-	background: transparent none;
+    background: transparent none;
 
-	text-rendering: optimizeLegibility;
-	font-family: "Open Sans", sans-serif;
-	color: #333;
+    text-rendering: optimizeLegibility;
+    font-family: "Open Sans", sans-serif;
+    color: #333;
 }
 
 /* Container */
 
 body>.container {
-	min-height: 100%;
+    min-height: 100%;
 
-	font-size: 13pt;
-	line-height: 1.5;
+    font-size: 13pt;
+    line-height: 1.5;
 }
 
 .container {
-	padding-left: 24px;
-	padding-right: 24px;
+    padding-left: 24px;
+    padding-right: 24px;
 }
 
 .masthead .container {
-	padding-left: 10px;
-	padding-right: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 @media (min-width: 992px) {
-	.container {
-		width: 870px;
-	}
+    .container {
+        width: 870px;
+    }
 }
 
 a {
-	text-decoration: underline;
+    text-decoration: underline;
 }
 
 h1>a,
@@ -52,7 +52,7 @@ h4>a,
 h4>a:hover,
 h5>a,
 h5>a:hover {
-	text-decoration: none;
+    text-decoration: none;
 }
 
 a,
@@ -65,24 +65,24 @@ h4,
 .section .emph,
 .nav-item.active,
 .nav-item:hover {
-	color: #8800ff;
+    color: #8800ff;
 }
 
 h2 {
-	margin: 0 0 20px 0;
+    margin: 0 0 20px 0;
 }
 
 h3.section {
-	margin: 40px 0 10px 0;
+    margin: 40px 0 10px 0;
 }
 
 h4.section {
-	margin: 20px 0 10px 0;
+    margin: 20px 0 10px 0;
 }
 
 h5 span.date,
 h5 span.author {
-	color: #8800ff;
+    color: #8800ff;
 }
 
 /* h5 span.author {
@@ -90,164 +90,210 @@ h5 span.author {
 } */
 
 .separator {
-	width: 70%;
-	border-bottom: 1px solid #cccccc;
-	opacity: 0.4;
-	margin: 40px auto;
-	clear: both;
+    width: 70%;
+    border-bottom: 1px solid #cccccc;
+    opacity: 0.4;
+    margin: 40px auto;
+    clear: both;
 }
 
 /* **** FOOTER **** */
 
 .footer {
-	margin-top: 80px;
+    margin-top: 80px;
 }
 
 .footer .separator {
-	margin-top: 0;
-	margin-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 10px;
 }
 
 .footer p {
-	font-size: 70%;
-	text-align: center;
+    font-size: 70%;
+    text-align: center;
 }
 
 /* **** NAVIGATION **** */
 
 nav>a.nav-item {
-	display: inline-block;
-	padding: 10px 14px;
+    display: inline-block;
+    padding: 10px 14px;
 
-	text-decoration: none;
-	font-size: 13pt;
+    text-decoration: none;
+    font-size: 13pt;
 }
 
 @media (max-width: 480px) {
-	nav>a.nav-item {
-		font-size: 11pt;
-	}
+    nav>a.nav-item {
+        font-size: 11pt;
+    }
 }
 
 @media (max-width: 320px) {
-	nav>a.nav-item {
-		font-size: 11pt;
-		padding-left: 4px;
-		padding-right: 4px;
-	}
+    nav>a.nav-item {
+        font-size: 11pt;
+        padding-left: 4px;
+        padding-right: 4px;
+    }
 }
 
 /* **** POSTS **** */
 
 .post p {
-	margin: 0 0 14pt;
+    margin: 14pt 0;
 }
 
 .post blockquote>p {
-	font-style: italic;
+    font-style: italic;
 }
 
 .post p img {
-	width: 100%;
+    width: 100%;
+}
+
+/* **** TABLES **** */
+
+table {
+    margin: 18pt auto;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #ccc;
+}
+
+th,
+td {
+    padding: 3px 20px;
+    border: 1px solid #f8f8f8;
+}
+
+tr:nth-child(even) {
+    background: #f7f7f7;
 }
 
 /* **** LIGHT/DARK MODE **** */
 
 @media (prefers-color-scheme: dark) {
 
-	/* Dark theme styles go here */
-	body {
-		background-color: #000;
-		color: #ccc;
-	}
+    /* Dark theme styles go here */
+    body {
+        background-color: #000;
+        color: #ccc;
+    }
 
-	a,
-	h1,
-	h2,
-	h3,
-	h4,
-	h5,
-	.page-title,
-	.section .emph,
-	.nav-item.active,
-	.nav-item:hover {
-		color: #8800ff;
-	}
+    a,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    .page-title,
+    .section .emph,
+    .nav-item.active,
+    .nav-item:hover {
+        color: #8800ff;
+    }
 
-	.skin-border,
-	.separator {
-		border-color: #80f;
-	}
+    .skin-border,
+    .separator {
+        border-color: #80f;
+    }
+
+    thead {
+        background: #3e455f
+    }
+
+    th,
+    td {
+        border-color: #1b1e29;
+    }
+
+    tr:nth-child(even) {
+        background: #1C1F2B;
+    }
 }
 
 @media (prefers-color-scheme: light) {
 
-	/* Light theme styles go here */
-	body {
-		background-color: #eee;
-	}
+    /* Light theme styles go here */
+    body {
+        background-color: #eee;
+    }
 
-	.skin-border,
-	.separator {
-		border-color: #80f;
-	}
+    .skin-border,
+    .separator {
+        border-color: #80f;
+    }
 
+    thead {
+        background: #ccc;
+    }
+
+    th,
+    td {
+        border-color: #f8f8f8;
+    }
+
+    tr:nth-child(even) {
+        background: #f7f7f7;
+    }
 }
 
 /* **** Home page **** */
 
 .cross-line {
-	margin-bottom: 40px;
+    margin-bottom: 40px;
 }
 
 /* **** Sections **** */
 
 .section .item-title {
-	font-style: italic;
-	margin-right: 6px;
+    font-style: italic;
+    margin-right: 6px;
 }
 
 .section .item-title:after {
-	content: ":";
+    content: ":";
 }
 
 /* **** Code **** */
 
 pre {
-	padding: 8px 10px 10px 10px;
-	margin: 20px 0;
-	overflow: scroll;
+    padding: 8px 10px 10px 10px;
+    margin: 20px 0;
+    overflow: scroll;
 
-	font-size: 11pt;
+    font-size: 11pt;
 }
 
 pre.bespoke-code {
-	background-color: #2b303b;
-	color: #c0c5ce;
+    background-color: #2b303b;
+    color: #c0c5ce;
 }
 
 p code {
-	font-size: 90%;
+    font-size: 90%;
 }
 
 /* **** Bootstrap replacement **** */
 
 * {
-	-webkit-box-sizing: border-box;
-	-moz-box-sizing: border-box;
-	box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 body {
-	margin: 0;
+    margin: 0;
 
-	font-size: 14px;
-	line-height: 1.42857143;
+    font-size: 14px;
+    line-height: 1.42857143;
 }
 
 .container {
-	margin-right: auto;
-	margin-left: auto;
+    margin-right: auto;
+    margin-left: auto;
 }
 
 h1,
@@ -256,38 +302,38 @@ h3,
 h4,
 h5,
 h6 {
-	margin-top: 32px;
-	margin-bottom: 18px;
+    margin-top: 32px;
+    margin-bottom: 18px;
 
-	font-weight: 500;
-	line-height: 1.1;
+    font-weight: 500;
+    line-height: 1.1;
 }
 
 h1 {
-	font-size: 36px;
+    font-size: 36px;
 }
 
 h2 {
-	font-size: 30px;
+    font-size: 30px;
 }
 
 h3 {
-	font-size: 24px;
+    font-size: 24px;
 }
 
 h4 {
-	font-size: 20px;
+    font-size: 20px;
 }
 
 h5 {
-	font-size: 14px;
-	margin-top: .48em;
+    font-size: 14px;
+    margin-top: .48em;
 }
 
 p {
-	margin: 0 0 10px;
+    margin: 0 0 10px;
 }
 
 a {
-	outline: 0;
+    outline: 0;
 }
