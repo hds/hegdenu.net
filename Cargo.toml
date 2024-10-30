@@ -2,8 +2,7 @@
 resolver = "2"
 
 members = [
-    "resources/debugging-tokio-instrumentation",
-    "resources/queues",
+    "resources/how-big-is-your-future",
     "resources/tokio-with-the-console",
     "resources/tracing-examples",
     "resources/tracing-reload",
