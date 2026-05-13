@@ -1,0 +1,19 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+    # Terminal theme code
+    theme-id: 200
+    pad: 30
+  }
+}
+alb: ALB
+gateway: Auth Gateway
+Kubernetes namespace: {
+    loadgen: Load Generator
+    app: Application Pod
+}
+
+Kubernetes namespace.loadgen -> alb
+alb -> gateway
+gateway -> Kubernetes namespace.app
+
