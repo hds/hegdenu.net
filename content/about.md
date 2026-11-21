@@ -3,7 +3,7 @@ title = "about"
 template = "about.html"
 +++
 
-I'm a software engineering manager (and amateur number theorist) living and working in Granada, Spain. I (perhaps very) occasionally write about programming, management, mathematics, and a few other technical things. Oh and Rust, I'll definitely be writing about Rust.
+I'm a software engineering manager living and working in Granada, Spain. I (perhaps very) occasionally write about programming, management, mathematics, and a few other technical things. And Rust, I'll definitely write about Rust.
 
 ### Contact
 
@@ -15,8 +15,11 @@ You can also find me as `haydenstainsby` on Discord. I'm generally pretty active
 
 _GitHub_: [hds](https://github.com/hds)
 
+_Bluesky_: [@hds.cafe](https://bsky.app/profile/hds.cafe)
+
 _Mastodon_: [@hds@hachyderm.io](https://hachyderm.io/@hds)
 
-_Twitter_: [@haydenstainsby](https://twitter.com/haydenstainsby) (dormant)
-
 _LinkedIn_: [Hayden Stainsby](https://www.linkedin.com/in/hayden-stainsby)
+
+I no longer use Twitter/X, but my handle is still there and dormant: `@haydenstainsby`.
+
