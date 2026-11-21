@@ -5,6 +5,11 @@ author = "hds"
 date = "2024-08-07"
 +++
 
+{% component traces() %}
+<pre data-lang="custom" style="background-color:#2b303b;color:#c0c5ce;" class="language-custom "><code class="language-custom" data-lang="custom">{{ body }}
+</code></pre>
+{% endcomponent traces %}
+
 Usually, I like to write posts about things I understand. Even if this means that I have to go and understand something first.
 
 This post is going to be a bit different. Instead, we're going to follow along as I try to understand something.
@@ -129,7 +134,7 @@ debug!("oneshot created");
 
 This code produces the following traces, output by `ari-subscriber`.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586108Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586108Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span>  <b><u><span style='color:#5aba84'>new</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586396Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
@@ -186,26 +191,26 @@ This code produces the following traces, output by `ari-subscriber`.
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587592Z</span> <span style='color:#5c8dce'>DEBUG</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span> 
      <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_oneshot</span></b>: <span style='color:#aaa'>oneshot created</span>
-{% end %}
+{% </traces> %}
 
 Oh wow! That's already a lot of traces. This may look a bit overwhelming, but we'll go through it bit by bit. The rest of it won't be so bad (we hope!).
 
 Right up the beginning, we create a new task. This is something we've seen in previous posts. This is the task that was spawned from `main()` using the async function `tokio_oneshot()`. Let's look at those traces, up to our first debug message.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586108Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586108Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span>  <b><u><span style='color:#5aba84'>new</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586396Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586456Z</span> <span style='color:#5c8dce'>DEBUG</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span> 
      <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_oneshot</span></b>: <span style='color:#aaa'>creating oneshot</span>
-{% end %}
+{% </traces> %}
 
 That's not so bad. We create a new task, it gets polled for the first time, and then we emit the debug message (within the scope of the task, so it has the `runtime.spawn` span as its parent).
 
 Now, let's look at the next little bit.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586519Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586519Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span>  <b><u><span style='color:#df5853'>new</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586592Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span>  <b><u><span style='color:#df5853'>enter</span></u></b>
@@ -214,7 +219,7 @@ Now, let's look at the next little bit.
      <span style='color:#c9184a'>⤷</span> <b><span style='color:#ff4d6d'>runtime::resource::state_update</span></b>: <span style='color:#c9184a'>tx_dropped=false, tx_dropped.op=&quot;override&quot;</span>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.586707Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span>  <b><u><span style='color:#df5853'>exit</span></u></b>
-{% end %}
+{% </traces> %}
 
 Here we create a `runtime.resource` span. From our list above, we know that this span represents a resource. The kind is `Sync` and the concrete type is specified as `Sender|Receiver`. This doesn't really seem concrete enough to me, what if there are other resources that are concretely "sender & receiver"? But never mind, we know that this must represent our oneshot channel, so that's good enough for us.
 
@@ -286,7 +291,7 @@ Maybe this is something we can look at in the future, but it would break older v
 
 After all the state updates (which I won't repeat all the traces for), the `runtime.resource.async_op` and `runtime.resource.async_op.poll` spans are created.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587229Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587229Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span>  <b><u><span style='color:#df5853'>enter</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587279Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span> 
@@ -303,16 +308,16 @@ After all the state updates (which I won't repeat all the traces for), the `runt
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587539Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span> 
      <span style='color:#5c8dce'>⤷</span> <span style='color:#5c8dce'>runtime.resource.async_op[<b><span style='color:#508ee3'>3</span></b></span><span style='color:#5c8dce'>]{source=&quot;Receiver::await&quot;}</span>  <b><u><span style='color:#508ee3'>exit</span></u></b>
-{% end %}
+{% </traces> %}
 
 Here the `runtime.resource` span is entered again to create a `runtime.resource.async_op` span. In turn, the `runtime.resource.async_op` span is entered to create a `runtime.resource.async_op.poll` span. Once again, the reason that the parent span is entered before creating the next span is because the console subscriber depends on the current active span state to determine the parent of each of these spans.
 
 Finally, we see our own debug message stating that the oneshot channel has been created.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587592Z</span> <span style='color:#5c8dce'>DEBUG</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587592Z</span> <span style='color:#5c8dce'>DEBUG</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span> 
      <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_oneshot</span></b>: <span style='color:#aaa'>oneshot created</span>
-{% end %}
+{% </traces> %}
 
 ## spawning tasks
 
@@ -331,7 +336,7 @@ Remember that while spawned tasks don't have to be awaited to start running, we'
 
 The next lot of traces correspond to those lines of code.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587650Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587650Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>5</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>new</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587730Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>6</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender, task.id=4}</span>  <b><u><span style='color:#5aba84'>new</span></u></b>
@@ -343,7 +348,7 @@ The next lot of traces correspond to those lines of code.
      <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.clone&quot;, task.id=1</span>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587940Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
-{% end %}
+{% </traces> %}
 
 We see that 2 new `runtime.spawn` spans are created, each one representing one of the tasks we're spawning. The first is the `receiver` task, the second is the `sender` task. As mentioned previously, we only store the join handle `jh` for the `receiver` task.
 
@@ -371,7 +376,7 @@ It's very short. We emit a debug message, await on the oneshot receiver and when
 
 We expect (although there may not be a guarantee) that the `receiver` task will be polled first, and the traces show that this is indeed the case. Let's see how far we get with our receiver task.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587997Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.587997Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>5</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.588051Z</span> <span style='color:#5c8dce'>DEBUG</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>5</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span> 
@@ -406,7 +411,7 @@ We expect (although there may not be a guarantee) that the `receiver` task will 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span>  <b><u><span style='color:#df5853'>exit</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.588571Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>5</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
-{% end %}
+{% </traces> %}
 
 In these traces we can see that we enter the `runtime.spawn` span for our `receiver` task and emit the debug event "awaiting message".
 
@@ -447,7 +452,7 @@ An important point to note here is that the `send` method on the oneshot sender 
 
 Let's have a look at the traces for this part of the code.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.588625Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.588625Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>6</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender, task.id=4}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.588674Z</span> <span style='color:#5c8dce'>DEBUG</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>6</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender, task.id=4}</span> 
@@ -467,7 +472,7 @@ Let's have a look at the traces for this part of the code.
      <span style='color:#aaa'>⤷</span> <b><span style='color:#aaa'>tokio_oneshot</span></b>: <span style='color:#aaa'>message sent</span>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.588991Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>6</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender, task.id=4}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
-{% end %}
+{% </traces> %}
 
 This snippet is a bit shorter than for the first time the receiver was polled. Let's go through it.
 
@@ -485,13 +490,13 @@ That line was last modified in 2019 ([tokio-rs/tokio#1120](https://github.com/to
 
 Finally, we see our second debug message `"message sent"` and then the `runtime.spawn` span ends, indicating that the task has yielded to the runtime. Since we have no `.await` points in this task, we know that the task must have returned `Poll::Ready`, which we can confirm in the next 3 traces.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589041Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589041Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>6</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender, task.id=4}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589088Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>6</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender, task.id=4}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589133Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>6</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=sender, task.id=4}</span>  <b><u><span style='color:#5aba84'>close</span></u></b>
-{% end %}
+{% </traces> %}
 
 Here we see the `runtime.spawn` span quickly enter and exit, before finally closing.
 
@@ -509,7 +514,7 @@ As we were hoping, now that the `sender` has sent a message through the oneshot 
 
 The next swath of traces is a bit long, so let's just look up until the `runtime.resource.async_op` span enters and exits again.
 
-{% traces() %}   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>5</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
+{% <traces> %}   <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>5</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589248Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span>  <b><u><span style='color:#df5853'>enter</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589294Z</span> <span style='color:#9d4edd'>TRACE</span> 
@@ -537,7 +542,7 @@ The next swath of traces is a bit long, so let's just look up until the `runtime
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span> 
      <span style='color:#5c8dce'>⤷</span> <span style='color:#5c8dce'>runtime.resource.async_op[<b><span style='color:#508ee3'>3</span></b></span><span style='color:#5c8dce'>]{source=&quot;Receiver::await&quot;}</span>  <b><u><span style='color:#508ee3'>exit</span></u></b>
 
-{% end %}
+{% </traces> %}
 
 Here we see the `runtime.spawn` span representing the `receiver` task enter, which is expected - it just got polled again after having been woken by the `send` operation.
 
@@ -549,7 +554,7 @@ After that, the `runtime::resource::poll_op` exits and then so does the `runtime
 
 Now let's follow the traces through until the `receiver` task completes.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589649Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589649Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span>  <b><u><span style='color:#df5853'>exit</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.589843Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ba5a57'>⤷</span> <span style='color:#ba5a57'>runtime.resource[<b><span style='color:#df5853'>2</span></b></span><span style='color:#ba5a57'>]{concrete_type=&quot;Sender|Receiver&quot;, kind=&quot;Sync&quot;}</span> 
@@ -571,7 +576,7 @@ Now let's follow the traces through until the `receiver` task completes.
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>5</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.590433Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>5</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=receiver, task.id=3}</span>  <b><u><span style='color:#5aba84'>close</span></u></b>
-{% end %}
+{% </traces> %}
 
 First up, we see the `runtime.resource` span exit (it had entered in the first traces we saw in this section). After that, our hierarchy of three spans close in the reverse order to their creation: `runtime.resource.async_op.poll`, `runtime.resource.async_op`, and finally `runtime.resource`. We now understand that the oneshot channel itself has been dropped.
 
@@ -616,7 +621,7 @@ async fn tokio_oneshot() {
 
 We had already seen the debug event `"awaiting receiver task"` earlier on. Since this task ran until we awaited on the join handle for the `receiver` task (the variable `jh`). Here are the final traces.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.590493Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.590493Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#9d4edd'>⤷</span> <b><span style='color:#c77dff'>tokio::task::waker</span></b>: <span style='color:#9d4edd'>op=&quot;waker.wake_by_ref&quot;, task.id=1</span>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.590554Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span>  <b><u><span style='color:#5aba84'>enter</span></u></b>
@@ -634,7 +639,7 @@ We had already seen the debug event `"awaiting receiver task"` earlier on. Since
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span>  <b><u><span style='color:#5aba84'>exit</span></u></b>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.590865Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#489e6c'>⤷</span> <span style='color:#489e6c'>runtime.spawn[<b><span style='color:#5aba84'>1</span></b></span><span style='color:#489e6c'>]{kind=task, task.name=tokio-oneshot, task.id=2}</span>  <b><u><span style='color:#5aba84'>close</span></u></b>
-{% end %}
+{% </traces> %}
 
 Now that we've remembered that our `tokio_oneshot` task had awaited the join handle for the `receiver` task, it's no surprise that the first event we see is a waker event, specifically the `tokio_oneshot` task getting woken up. This `tokio::task::waker` event has no parent span, so it didn't occur in any task or resource that we're aware of. This is happening somewhere inside the runtime.
 
@@ -648,13 +653,13 @@ That's almost the end of the traces, but it isn't...
 
 There are actually 3 more traces at the end, and it took me a little while to realise what was going on. Here they are.
 
-{% traces() %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.590983Z</span> <span style='color:#9d4edd'>TRACE</span> 
+{% <traces> %}<span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.590983Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#c9184a'>⤷</span> <b><span style='color:#ff4d6d'>runtime::resource::state_update</span></b>: <span style='color:#c9184a'>tx_dropped=true, tx_dropped.op=&quot;override&quot;</span>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.591050Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#ffbf69'>⤷</span> <b><span style='color:#ff9f1c'>runtime::resource::poll_op</span></b>: <span style='color:#ffbf69'>op_name=&quot;poll_recv&quot;, is_ready=true</span>
 <span style='opacity:0.67'><b><span style='color:#aaa'>2024-07-31</span></b></span><span style='opacity:0.67'>T<b><span style='color:#aaa'>15:35:48</span></b></span><span style='opacity:0.67'>.591106Z</span> <span style='color:#9d4edd'>TRACE</span> 
    <span style='color:#c9184a'>⤷</span> <b><span style='color:#ff4d6d'>runtime::resource::state_update</span></b>: <span style='color:#c9184a'>rx_dropped=true, rx_dropped.op=&quot;override&quot;</span>
-{% end %}
+{% </traces> %}
 
 These traces show state updates that look like ones we've seen previously. They don't have any parent spans, which seems weird, but we can see the following things happen:
 - a sender is dropped
